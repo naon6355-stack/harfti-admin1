@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harfti Admin</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --bg-2: #131922;
+    --bg-3: #1b2330;
+    --border: #2a3441;
+    --text: #e6edf3;
+    --text-dim: #8b96a5;
+    --accent: #f5a623;
+    --accent-dim: #b87a1a;
+    --success: #3fb950;
+    --danger: #f85149;
+    --info: #58a6ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Cairo", "Tahoma", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  button { font-family: inherit; cursor: pointer; }
+  input, select, textarea {
+    font-family: inherit;
+    background: var(--bg-3);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    outline: none;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  button.primary {
+    background: var(--accent);
+    color: #1a1206;
+    border: none;
+    padding: 9px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  button.primary:hover { background: #ffb840; }
+  button.ghost {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  button.ghost:hover { background: var(--bg-3); }
+  button.danger {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  button.danger:hover { background: rgba(248, 81, 73, 0.1); }
+  button.success {
+    background: var(--success);
+    color: #fff;
+    border: none;
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+
+  /* === LOGIN === */
+  #login-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .login-box {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    width: 100%;
+    max-width: 400px;
+  }
+  .login-box h1 {
+    color: var(--accent);
+    font-size: 28px;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+  .login-box p { color: var(--text-dim); margin-bottom: 24px; font-size: 13px; }
+  .login-box input { width: 100%; margin-bottom: 12px; padding: 10px 14px; }
+  .login-box button { width: 100%; padding: 11px; }
+  .login-error {
+    color: var(--danger);
+    font-size: 12px;
+    margin-top: 10px;
+    min-height: 16px;
+  }
+
+  /* === LAYOUT === */
+  #app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+  aside.sidebar {
+    background: var(--bg-2);
+    border-left: 1px solid var(--border);
+    padding: 16px 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .brand {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .brand h1 {
+    color: var(--accent);
+    font-size: 22px;
+    letter-spacing: -0.5px;
+  }
+  .brand .who {
+    color: var(--text-dim);
+    font-size: 11px;
+    margin-top: 4px;
+    word-break: break-all;
+  }
+  nav.nav { display: flex; flex-direction: column; padding: 0 8px; }
+  nav.nav button {
+    background: transparent;
+    color: var(--text);
+    border: none;
+    text-align: right;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+  }
+  nav.nav button:hover { background: var(--bg-3); }
+  nav.nav button.active {
+    background: var(--bg-3);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  nav.nav button .badge {
+    background: var(--bg);
+    color: var(--text-dim);
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 10px;
+  }
+  .logout-btn {
+    margin: 16px 8px;
+    width: calc(100% - 16px);
+    padding: 8px;
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+  }
+
+  main.content { padding: 24px 32px; overflow-x: hidden; }
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .page-header h2 { font-size: 24px; letter-spacing: -0.3px; }
+  .page-header .tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  /* === DASHBOARD === */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .stat-card {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .stat-card .label {
+    color: var(--text-dim);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .stat-card .value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .stat-card .value.accent { color: var(--accent); }
+  .stat-card .sub { color: var(--text-dim); font-size: 11px; margin-top: 4px; }
+
+  /* === TABLE === */
+  .table-wrap {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .table-scroll { overflow-x: auto; max-width: 100%; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead { background: var(--bg-3); }
+  th, td {
+    padding: 12px 14px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  th {
+    color: var(--text-dim);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  tbody tr:hover { background: var(--bg-3); }
+  td.actions { display: flex; gap: 6px; }
+  td.id-cell {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .pill.green { background: rgba(63, 185, 80, 0.15); color: var(--success); }
+  .pill.red { background: rgba(248, 81, 73, 0.15); color: var(--danger); }
+  .pill.gray { background: var(--bg-3); color: var(--text-dim); }
+  .pill.amber { background: rgba(245, 166, 35, 0.15); color: var(--accent); }
+  .pill.blue { background: rgba(88, 166, 255, 0.15); color: var(--info); }
+
+  .empty-state {
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--text-dim);
+  }
+  .loading {
+    padding: 40px;
+    text-align: center;
+    color: var(--text-dim);
+  }
+  .spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* === MODAL === */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .modal-overlay[hidden] { display: none; }
+  .modal {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    max-width: 700px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 24px;
+  }
+  .modal h3 {
+    margin-bottom: 16px;
+    color: var(--accent);
+    font-size: 18px;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-start;
+    margin-top: 20px;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    align-items: start;
+  }
+  .field-row:last-child { border-bottom: none; }
+  .field-key {
+    color: var(--text-dim);
+    font-size: 12px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    padding-top: 4px;
+  }
+  .field-val { font-size: 13px; word-break: break-word; }
+  .field-val img {
+    max-width: 100px;
+    max-height: 100px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    margin: 2px;
+  }
+  .field-val.array-val { display: flex; flex-wrap: wrap; gap: 4px; }
+  .field-val pre {
+    background: var(--bg);
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+  }
+
+  /* Edit modal */
+  .edit-field {
+    margin-bottom: 14px;
+  }
+  .edit-field label {
+    display: block;
+    color: var(--text-dim);
+    font-size: 11px;
+    margin-bottom: 4px;
+    font-family: ui-monospace, monospace;
+  }
+  .edit-field input, .edit-field textarea, .edit-field select {
+    width: 100%;
+  }
+  .edit-field textarea { min-height: 60px; font-family: ui-monospace, monospace; font-size: 12px; }
+  .edit-field .type-hint {
+    display: inline-block;
+    background: var(--bg);
+    color: var(--text-dim);
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-right: 6px;
+  }
+
+  /* Image viewer */
+  .img-viewer {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    cursor: zoom-out;
+  }
+  .img-viewer[hidden] { display: none; }
+  .img-viewer img { max-width: 95vw; max-height: 95vh; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-right: 3px solid var(--accent);
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    z-index: 300;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    animation: slideIn 0.2s;
+  }
+  .toast.error { border-right-color: var(--danger); }
+  .toast.success { border-right-color: var(--success); }
+  @keyframes slideIn { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  /* Recharge code generator */
+  .gen-box {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .gen-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+  .gen-row > div { flex: 1; min-width: 140px; }
+  .gen-row label { display: block; font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+
+  @media (max-width: 768px) {
+    #app { grid-template-columns: 1fr; }
+    aside.sidebar { position: relative; height: auto; }
+    main.content { padding: 16px; }
+    .field-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>Harfti</h1>
+    <p>لوحة التحكم — Admin Panel</p>
+    <input id="login-email" type="email" placeholder="Email" autocomplete="email">
+    <input id="login-pass" type="password" placeholder="Password" autocomplete="current-password">
+    <button class="primary" id="login-btn">دخول</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" hidden>
+  <aside class="sidebar">
+    <div class="brand">
+      <h1>Harfti</h1>
+      <div class="who" id="who"></div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <button class="logout-btn" id="logout-btn">خروج</button>
+  </aside>
+
+  <main class="content">
+    <div id="page"></div>
+  </main>
+</div>
+
+<!-- Modals -->
+<div class="modal-overlay" id="modal-overlay" hidden>
+  <div class="modal" id="modal"></div>
+</div>
+<div class="img-viewer" id="img-viewer" hidden onclick="this.hidden=true"></div>
+
+<script type="module">
+// ============================================================
+// 🔧 FIREBASE CONFIG — عمر هاد القيم من Firebase Console
+// ============================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyBxeghvR8tAK9_xvHfqoAkfV_kC35Lv3_U",
+  authDomain: "harfti-a488e.firebaseapp.com",
+  databaseURL: "https://harfti-a488e-default-rtdb.firebaseio.com",
+  projectId: "harfti-a488e",
+  storageBucket: "harfti-a488e.firebasestorage.app",
+  messagingSenderId: "312456421531",
+  appId: "1:312456421531:web:6e02228a3283fb6eab663e",
+  measurementId: "G-8PZZV90N2P"
+};
+
+const ADMIN_EMAIL = "naon64755@gmail.com";
+
+// ============================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, collection, getDocs, getDoc, doc, query, limit, orderBy,
+  where, updateDoc, deleteDoc, setDoc, addDoc, serverTimestamp, Timestamp
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ============================================================
+// COLLECTIONS CONFIG
+// ============================================================
+const COLLECTIONS = [
+  { id: "dashboard", label: "لوحة القيادة", icon: "📊", special: true },
+  { id: "users", label: "المستخدمين" },
+  { id: "requests", label: "الطلبات" },
+  { id: "post_offers", label: "العروض" },
+  { id: "phone_reveals", label: "كشف الهاتف" },
+  { id: "reviews", label: "التقييمات" },
+  { id: "recharge_codes", label: "كودات الشحن" },
+  { id: "banners", label: "البانرات" },
+  { id: "community_posts", label: "منشورات المجتمع" },
+  { id: "chats", label: "المحادثات" }
+];
+
+// ============================================================
+// UTIL
+// ============================================================
+const $ = (id) => document.getElementById(id);
+
+function toast(msg, type = "info") {
+  const t = document.createElement("div");
+  t.className = "toast " + type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function fmtDate(v) {
+  if (!v) return "—";
+  let d;
+  if (typeof v === "number") d = new Date(v);
+  else if (v.toDate) d = v.toDate();
+  else if (v.seconds) d = new Date(v.seconds * 1000);
+  else d = new Date(v);
+  if (isNaN(d)) return String(v);
+  return d.toLocaleString("ar-DZ", { dateStyle: "short", timeStyle: "short" });
+}
+
+function isImageUrl(s) {
+  return typeof s === "string" && /^https?:\/\//.test(s) &&
+    (/\.(jpe?g|png|gif|webp|heic)/i.test(s) || s.includes("firebasestorage") || s.includes("googleusercontent"));
+}
+
+function detectType(v) {
+  if (v === null) return "null";
+  if (Array.isArray(v)) return "array";
+  if (v && typeof v === "object") {
+    if (v.toDate || v.seconds !== undefined && v.nanoseconds !== undefined) return "timestamp";
+    return "map";
+  }
+  return typeof v;
+}
+
+function renderValue(v) {
+  const t = detectType(v);
+  if (t === "null") return '<span style="color:var(--text-dim)">null</span>';
+  if (t === "boolean") return v
+    ? '<span class="pill green">true</span>'
+    : '<span class="pill red">false</span>';
+  if (t === "timestamp") return `<span class="pill blue">${fmtDate(v)}</span>`;
+  if (t === "array") {
+    if (v.length === 0) return '<span style="color:var(--text-dim)">[]</span>';
+    if (v.every(isImageUrl)) {
+      return `<div class="array-val">${v.map(u => `<img src="${u}" onclick="window.__viewImg('${u}')" loading="lazy">`).join("")}</div>`;
+    }
+    return `<pre>${escape(JSON.stringify(v, null, 2))}</pre>`;
+  }
+  if (t === "map") return `<pre>${escape(JSON.stringify(v, null, 2))}</pre>`;
+  if (t === "string" && isImageUrl(v)) {
+    return `<img src="${v}" onclick="window.__viewImg('${v}')" loading="lazy">`;
+  }
+  if (t === "number" && v > 1000000000000) return `<span class="pill blue">${fmtDate(v)}</span>`;
+  return escape(String(v));
+}
+
+function escape(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+window.__viewImg = (url) => {
+  const v = $("img-viewer");
+  v.innerHTML = `<img src="${url}">`;
+  v.hidden = false;
+};
+
+// ============================================================
+// AUTH
+// ============================================================
+$("login-btn").onclick = async () => {
+  const email = $("login-email").value.trim();
+  const pass = $("login-pass").value;
+  const err = $("login-error");
+  err.textContent = "";
+  if (email !== ADMIN_EMAIL) {
+    err.textContent = "هاد الحساب ماشي admin.";
+    return;
+  }
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch (e) {
+    err.textContent = "Email أو password خاطئ.";
+  }
+};
+
+$("login-pass").addEventListener("keydown", e => {
+  if (e.key === "Enter") $("login-btn").click();
+});
+
+$("logout-btn").onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, (user) => {
+  if (user && user.email === ADMIN_EMAIL) {
+    $("login-screen").hidden = true;
+    $("app").hidden = false;
+    $("who").textContent = user.email;
+    initApp();
+  } else {
+    $("login-screen").hidden = false;
+    $("app").hidden = true;
+    if (user) {
+      signOut(auth);
+      $("login-error").textContent = "هاد الحساب ماشي admin.";
+    }
+  }
+});
+
+// ============================================================
+// APP INIT
+// ============================================================
+let currentPage = "dashboard";
+
+function initApp() {
+  const nav = $("nav");
+  nav.innerHTML = "";
+  COLLECTIONS.forEach(c => {
+    const b = document.createElement("button");
+    b.dataset.page = c.id;
+    b.innerHTML = `<span>${c.label}</span><span class="badge" id="badge-${c.id}"></span>`;
+    b.onclick = () => navigateTo(c.id);
+    nav.appendChild(b);
+  });
+  navigateTo("dashboard");
+}
+
+function navigateTo(pageId) {
+  currentPage = pageId;
+  document.querySelectorAll("#nav button").forEach(b => {
+    b.classList.toggle("active", b.dataset.page === pageId);
+  });
+  if (pageId === "dashboard") renderDashboard();
+  else if (pageId === "recharge_codes") renderRechargeCodes();
+  else renderCollection(pageId);
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+async function renderDashboard() {
+  const page = $("page");
+  page.innerHTML = `
+    <div class="page-header"><h2>لوحة القيادة</h2></div>
+    <div class="stats-grid" id="stats"><div class="loading"><div class="spinner"></div></div></div>
+    <div class="page-header"><h2 style="font-size:18px">آخر الطلبات</h2></div>
+    <div id="recent-requests" class="loading"><div class="spinner"></div></div>
+  `;
+
+  const stats = $("stats");
+  stats.innerHTML = "";
+
+  try {
+    const [usersSnap, requestsSnap, revealsSnap, postOffersSnap, reviewsSnap] = await Promise.all([
+      getDocs(collection(db, "users")),
+      getDocs(collection(db, "requests")),
+      getDocs(collection(db, "phone_reveals")),
+      getDocs(collection(db, "post_offers")),
+      getDocs(collection(db, "reviews"))
+    ]);
+
+    let workers = 0, clients = 0, verified = 0, online = 0;
+    usersSnap.forEach(d => {
+      const u = d.data();
+      if (u.category || u.domain) workers++; else clients++;
+      if (u.isVerified) verified++;
+      if (u.isOnline) online++;
+    });
+
+    const startToday = new Date(); startToday.setHours(0,0,0,0);
+    let revealsToday = 0;
+    revealsSnap.forEach(d => {
+      const r = d.data();
+      const ts = r.timestamp || r.createdAt || r.at;
+      let date;
+      if (ts?.toDate) date = ts.toDate();
+      else if (typeof ts === "number") date = new Date(ts);
+      if (date && date >= startToday) revealsToday++;
+    });
+
+    const cards = [
+      { label: "إجمالي المستخدمين", value: usersSnap.size },
+      { label: "حرفيين", value: workers, sub: `${verified} موثّق` },
+      { label: "زبائن", value: clients },
+      { label: "أونلاين دروك", value: online, accent: true },
+      { label: "إجمالي الطلبات", value: requestsSnap.size },
+      { label: "كشف الهاتف اليوم", value: revealsToday, accent: true },
+      { label: "كشف الهاتف (الكل)", value: revealsSnap.size },
+      { label: "العروض", value: postOffersSnap.size },
+      { label: "التقييمات", value: reviewsSnap.size }
+    ];
+
+    stats.innerHTML = cards.map(c => `
+      <div class="stat-card">
+        <div class="label">${c.label}</div>
+        <div class="value ${c.accent?'accent':''}">${c.value}</div>
+        ${c.sub ? `<div class="sub">${c.sub}</div>` : ""}
+      </div>
+    `).join("");
+
+    // recent requests
+    const recentEl = $("recent-requests");
+    const reqs = [];
+    requestsSnap.forEach(d => reqs.push({ id: d.id, ...d.data() }));
+    reqs.sort((a,b) => {
+      const ta = a.createdAt?.seconds || a.timestamp?.seconds || 0;
+      const tb = b.createdAt?.seconds || b.timestamp?.seconds || 0;
+      return tb - ta;
+    });
+    const top = reqs.slice(0, 8);
+    if (top.length === 0) {
+      recentEl.innerHTML = '<div class="empty-state">ما كاينش طلبات</div>';
+    } else {
+      recentEl.className = "table-wrap";
+      recentEl.innerHTML = `<div class="table-scroll"><table>
+        <thead><tr><th>ID</th><th>الحالة</th><th>الفئة</th><th>التاريخ</th></tr></thead>
+        <tbody>${top.map(r => `<tr>
+          <td class="id-cell">${escape(r.id)}</td>
+          <td><span class="pill ${r.status==='accepted'?'green':r.status==='pending'?'amber':'gray'}">${escape(r.status||'—')}</span></td>
+          <td>${escape(r.category || r.domain || '—')}</td>
+          <td>${fmtDate(r.createdAt || r.timestamp)}</td>
+        </tr>`).join("")}</tbody>
+      </table></div>`;
+    }
+  } catch (e) {
+    console.error(e);
+    stats.innerHTML = `<div class="empty-state">خطأ: ${e.message}</div>`;
+  }
+}
+
+// ============================================================
+// GENERIC COLLECTION VIEW
+// ============================================================
+async function renderCollection(colId) {
+  const cfg = COLLECTIONS.find(c => c.id === colId);
+  const page = $("page");
+  page.innerHTML = `
+    <div class="page-header">
+      <h2>${cfg.label}</h2>
+      <div class="tools">
+        <input type="text" id="search" placeholder="بحث (id أو حقل)…" style="width:240px">
+        <select id="limit-sel">
+          <option value="50">50</option>
+          <option value="100">100</option>
+          <option value="200">200</option>
+          <option value="500">500</option>
+        </select>
+        <button class="ghost" id="refresh">🔄 تحديث</button>
+        <button class="primary" id="add-new">+ جديد</button>
+      </div>
+    </div>
+    <div id="table-area" class="loading"><div class="spinner"></div></div>
+  `;
+
+  $("refresh").onclick = () => loadCol();
+  $("limit-sel").onchange = () => loadCol();
+  $("search").oninput = () => filterRows($("search").value);
+  $("add-new").onclick = () => openEditModal(colId, null, {});
+
+  let allRows = [];
+
+  async function loadCol() {
+    const area = $("table-area");
+    area.className = "loading";
+    area.innerHTML = '<div class="spinner"></div>';
+    try {
+      const lim = parseInt($("limit-sel").value, 10);
+      const snap = await getDocs(query(collection(db, colId), limit(lim)));
+      allRows = [];
+      snap.forEach(d => allRows.push({ id: d.id, ...d.data() }));
+      renderRows(allRows);
+    } catch (e) {
+      console.error(e);
+      area.className = "";
+      area.innerHTML = `<div class="empty-state">خطأ: ${escape(e.message)}</div>`;
+    }
+  }
+
+  function filterRows(q) {
+    q = q.toLowerCase().trim();
+    if (!q) return renderRows(allRows);
+    const filtered = allRows.filter(r => {
+      const j = JSON.stringify(r).toLowerCase();
+      return j.includes(q);
+    });
+    renderRows(filtered);
+  }
+
+  function renderRows(rows) {
+    const area = $("table-area");
+    area.className = "table-wrap";
+    if (rows.length === 0) {
+      area.innerHTML = '<div class="empty-state">ما كاينش بيانات</div>';
+      return;
+    }
+    // detect columns: id + key fields
+    const keys = pickKeyFields(colId, rows);
+    const header = `<tr><th>ID</th>${keys.map(k => `<th>${escape(k)}</th>`).join("")}<th>أوامر</th></tr>`;
+    const body = rows.map(r => {
+      return `<tr>
+        <td class="id-cell" title="${escape(r.id)}">${escape(r.id.slice(0,12))}…</td>
+        ${keys.map(k => `<td>${renderCell(r[k], k, r, colId)}</td>`).join("")}
+        <td class="actions">
+          <button class="ghost" onclick="window.__view('${colId}','${r.id}')">عرض</button>
+          <button class="ghost" onclick="window.__edit('${colId}','${r.id}')">تعديل</button>
+          ${specialActions(colId, r)}
+          <button class="danger" onclick="window.__del('${colId}','${r.id}')">حذف</button>
+        </td>
+      </tr>`;
+    }).join("");
+    area.innerHTML = `<div class="table-scroll"><table><thead>${header}</thead><tbody>${body}</tbody></table></div>`;
+  }
+
+  window.__view = (c, id) => openViewModal(c, id);
+  window.__edit = (c, id) => openEditModal(c, id);
+  window.__del = async (c, id) => {
+    if (!confirm(`متأكد من حذف ${id}؟`)) return;
+    try {
+      await deleteDoc(doc(db, c, id));
+      toast("اتحذف", "success");
+      loadCol();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+  window.__verify = async (id, val) => {
+    try {
+      await updateDoc(doc(db, "users", id), { isVerified: val });
+      toast(val ? "اتوثّق" : "اترفع التوثيق", "success");
+      loadCol();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+
+  loadCol();
+}
+
+function pickKeyFields(colId, rows) {
+  const presets = {
+    users: ["name", "phone", "category", "city", "isVerified", "isOnline"],
+    requests: ["status", "category", "clientId", "workerId", "createdAt"],
+    post_offers: ["workerId", "requestId", "price", "status"],
+    phone_reveals: ["clientId", "workerId", "timestamp", "cost"],
+    reviews: ["workerId", "clientId", "rating", "comment"],
+    recharge_codes: ["code", "amount", "isUsed", "usedBy"],
+    banners: ["title", "imageUrl", "isActive", "order"],
+    community_posts: ["authorId", "text", "createdAt"],
+    chats: ["participants", "lastMessage", "updatedAt"]
+  };
+  if (presets[colId]) return presets[colId];
+  // fallback: first 5 fields from first row
+  const r = rows[0] || {};
+  return Object.keys(r).filter(k => k !== "id").slice(0, 5);
+}
+
+function renderCell(v, key, row, colId) {
+  if (v === undefined || v === null) return '<span style="color:var(--text-dim)">—</span>';
+  if (typeof v === "boolean") return v ? '<span class="pill green">✓</span>' : '<span class="pill red">✗</span>';
+  if (key === "isVerified" || key === "isOnline" || key === "isUsed" || key === "isActive" || key === "isProfileComplete") {
+    return v ? '<span class="pill green">✓</span>' : '<span class="pill red">✗</span>';
+  }
+  if (key === "status") {
+    const cls = v === "accepted" || v === "completed" ? "green" :
+                v === "pending" ? "amber" :
+                v === "rejected" || v === "cancelled" ? "red" : "gray";
+    return `<span class="pill ${cls}">${escape(String(v))}</span>`;
+  }
+  if (key.toLowerCase().includes("at") || key.toLowerCase().includes("time") || key === "createdAt" || key === "updatedAt" || key === "timestamp") {
+    return fmtDate(v);
+  }
+  if (Array.isArray(v)) return `<span style="color:var(--text-dim)">[${v.length}]</span>`;
+  if (typeof v === "object") return `<span style="color:var(--text-dim)">{…}</span>`;
+  if (typeof v === "string" && isImageUrl(v)) {
+    return `<img src="${v}" style="max-width:40px;max-height:40px;border-radius:4px" onclick="window.__viewImg('${v}')">`;
+  }
+  const s = String(v);
+  return escape(s.length > 60 ? s.slice(0, 60) + "…" : s);
+}
+
+function specialActions(colId, row) {
+  if (colId === "users") {
+    return row.isVerified
+      ? `<button class="ghost" onclick="window.__verify('${row.id}', false)">رفع التوثيق</button>`
+      : `<button class="success" onclick="window.__verify('${row.id}', true)">توثيق ✓</button>`;
+  }
+  return "";
+}
+
+// ============================================================
+// VIEW MODAL
+// ============================================================
+async function openViewModal(colId, docId) {
+  const m = $("modal");
+  const ov = $("modal-overlay");
+  m.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  ov.hidden = false;
+  try {
+    const snap = await getDoc(doc(db, colId, docId));
+    if (!snap.exists()) {
+      m.innerHTML = `<h3>ما لقيتش</h3><div class="modal-actions"><button class="ghost" onclick="document.getElementById('modal-overlay').hidden=true">إغلاق</button></div>`;
+      return;
+    }
+    const data = snap.data();
+    const rows = Object.keys(data).sort().map(k => `
+      <div class="field-row">
+        <div class="field-key">${escape(k)}</div>
+        <div class="field-val">${renderValue(data[k])}</div>
+      </div>
+    `).join("");
+    m.innerHTML = `
+      <h3>${escape(colId)} / ${escape(docId)}</h3>
+      <div>${rows}</div>
+      <div class="modal-actions">
+        <button class="primary" onclick="document.getElementById('modal-overlay').hidden=true; window.__edit('${colId}','${docId}')">تعديل</button>
+        <button class="ghost" onclick="document.getElementById('modal-overlay').hidden=true">إغلاق</button>
+      </div>
+    `;
+  } catch (e) {
+    m.innerHTML = `<h3>خطأ</h3><p>${escape(e.message)}</p>`;
+  }
+}
+
+// ============================================================
+// EDIT MODAL
+// ============================================================
+async function openEditModal(colId, docId, presetData = null) {
+  const m = $("modal");
+  const ov = $("modal-overlay");
+  m.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  ov.hidden = false;
+
+  let data = presetData;
+  let isNew = !docId;
+  try {
+    if (docId && data === null) {
+      const snap = await getDoc(doc(db, colId, docId));
+      if (!snap.exists()) {
+        m.innerHTML = `<h3>ما لقيتش</h3>`;
+        return;
+      }
+      data = snap.data();
+    }
+    if (isNew && Object.keys(data).length === 0) {
+      // try infer from existing docs
+      const sample = await getDocs(query(collection(db, colId), limit(1)));
+      sample.forEach(d => {
+        const sd = d.data();
+        Object.keys(sd).forEach(k => {
+          const v = sd[k];
+          data[k] = typeof v === "boolean" ? false :
+                   typeof v === "number" ? 0 :
+                   Array.isArray(v) ? [] :
+                   typeof v === "object" && v !== null ? {} : "";
+        });
+      });
+    }
+
+    const fields = Object.keys(data).sort().map(k => fieldEditor(k, data[k])).join("");
+    m.innerHTML = `
+      <h3>${isNew ? "إضافة جديد" : "تعديل"} — ${escape(colId)}${docId ? " / " + escape(docId) : ""}</h3>
+      <div id="edit-fields">${fields}</div>
+      <div style="margin-top:14px">
+        <button class="ghost" id="add-field-btn">+ زيد حقل</button>
+      </div>
+      <div class="modal-actions">
+        <button class="primary" id="save-btn">حفظ</button>
+        <button class="ghost" onclick="document.getElementById('modal-overlay').hidden=true">إلغاء</button>
+      </div>
+    `;
+
+    $("add-field-btn").onclick = () => {
+      const key = prompt("اسم الحقل:");
+      if (!key) return;
+      const div = document.createElement("div");
+      div.innerHTML = fieldEditor(key, "");
+      $("edit-fields").appendChild(div.firstElementChild);
+    };
+
+    $("save-btn").onclick = async () => {
+      const updated = collectFields();
+      try {
+        if (isNew) {
+          if (docId) await setDoc(doc(db, colId, docId), updated);
+          else await addDoc(collection(db, colId), updated);
+          toast("اتزاد", "success");
+        } else {
+          await updateDoc(doc(db, colId, docId), updated);
+          toast("اتحفظ", "success");
+        }
+        ov.hidden = true;
+        navigateTo(colId);
+      } catch (e) {
+        toast("خطأ: " + e.message, "error");
+      }
+    };
+  } catch (e) {
+    m.innerHTML = `<h3>خطأ</h3><p>${escape(e.message)}</p>`;
+  }
+}
+
+function fieldEditor(key, value) {
+  const type = detectType(value);
+  let input = "";
+  if (type === "boolean") {
+    input = `<select data-key="${escape(key)}" data-type="boolean">
+      <option value="true" ${value?'selected':''}>true</option>
+      <option value="false" ${!value?'selected':''}>false</option>
+    </select>`;
+  } else if (type === "number") {
+    input = `<input type="number" step="any" data-key="${escape(key)}" data-type="number" value="${value}">`;
+  } else if (type === "array" || type === "map" || type === "timestamp") {
+    const txt = type === "timestamp" ? JSON.stringify(value.toDate ? value.toDate().toISOString() : value) : JSON.stringify(value, null, 2);
+    input = `<textarea data-key="${escape(key)}" data-type="${type}">${escape(txt)}</textarea>`;
+  } else if (type === "null") {
+    input = `<input type="text" data-key="${escape(key)}" data-type="null" value="">`;
+  } else {
+    input = `<input type="text" data-key="${escape(key)}" data-type="string" value="${escape(String(value))}">`;
+  }
+  return `<div class="edit-field"><label><span class="type-hint">${type}</span>${escape(key)}</label>${input}</div>`;
+}
+
+function collectFields() {
+  const result = {};
+  document.querySelectorAll("#edit-fields [data-key]").forEach(el => {
+    const k = el.dataset.key;
+    const t = el.dataset.type;
+    const raw = el.value;
+    if (t === "boolean") result[k] = raw === "true";
+    else if (t === "number") result[k] = raw === "" ? null : Number(raw);
+    else if (t === "array" || t === "map") {
+      try { result[k] = JSON.parse(raw); }
+      catch { result[k] = raw; }
+    } else if (t === "timestamp") {
+      try {
+        const parsed = JSON.parse(raw);
+        const d = new Date(parsed);
+        result[k] = isNaN(d) ? raw : Timestamp.fromDate(d);
+      } catch { result[k] = raw; }
+    } else if (t === "null") {
+      result[k] = raw === "" ? null : raw;
+    } else {
+      result[k] = raw;
+    }
+  });
+  return result;
+}
+
+// ============================================================
+// RECHARGE CODES — special page with generator
+// ============================================================
+async function renderRechargeCodes() {
+  const page = $("page");
+  page.innerHTML = `
+    <div class="page-header"><h2>كودات الشحن</h2></div>
+
+    <div class="gen-box">
+      <h3 style="margin-bottom:14px;color:var(--accent);font-size:15px">توليد كودات جديدة</h3>
+      <div class="gen-row">
+        <div>
+          <label>العدد</label>
+          <input type="number" id="gen-count" value="10" min="1" max="500">
+        </div>
+        <div>
+          <label>المبلغ (coins)</label>
+          <input type="number" id="gen-amount" value="100" min="1">
+        </div>
+        <div>
+          <label>طول الكود</label>
+          <input type="number" id="gen-length" value="10" min="6" max="20">
+        </div>
+        <div>
+          <label>Prefix (اختياري)</label>
+          <input type="text" id="gen-prefix" placeholder="مثلا HRF" maxlength="5">
+        </div>
+        <div style="flex:0">
+          <button class="primary" id="gen-btn">توليد</button>
+        </div>
+      </div>
+      <div id="gen-result" style="margin-top:12px;font-size:12px;color:var(--text-dim)"></div>
+    </div>
+
+    <div class="page-header">
+      <h2 style="font-size:16px">الكودات الموجودة</h2>
+      <div class="tools">
+        <input type="text" id="search" placeholder="بحث…" style="width:200px">
+        <button class="ghost" id="refresh">🔄</button>
+      </div>
+    </div>
+    <div id="table-area" class="loading"><div class="spinner"></div></div>
+  `;
+
+  $("gen-btn").onclick = generateCodes;
+  $("refresh").onclick = loadCodes;
+  $("search").oninput = () => filterCodes($("search").value);
+
+  let allCodes = [];
+
+  async function loadCodes() {
+    const area = $("table-area");
+    area.className = "loading";
+    area.innerHTML = '<div class="spinner"></div>';
+    try {
+      const snap = await getDocs(query(collection(db, "recharge_codes"), limit(500)));
+      allCodes = [];
+      snap.forEach(d => allCodes.push({ id: d.id, ...d.data() }));
+      renderCodes(allCodes);
+    } catch (e) {
+      area.className = "";
+      area.innerHTML = `<div class="empty-state">خطأ: ${escape(e.message)}</div>`;
+    }
+  }
+
+  function filterCodes(q) {
+    q = q.toLowerCase().trim();
+    if (!q) return renderCodes(allCodes);
+    renderCodes(allCodes.filter(c => JSON.stringify(c).toLowerCase().includes(q)));
+  }
+
+  function renderCodes(rows) {
+    const area = $("table-area");
+    area.className = "table-wrap";
+    if (rows.length === 0) {
+      area.innerHTML = '<div class="empty-state">ما كاينش كودات</div>';
+      return;
+    }
+    const body = rows.map(r => `
+      <tr>
+        <td style="font-family:ui-monospace,monospace;font-weight:600">${escape(r.code || r.id)}</td>
+        <td><span class="pill amber">${r.amount || 0}</span></td>
+        <td>${r.isUsed ? '<span class="pill red">مستعمل</span>' : '<span class="pill green">صالح</span>'}</td>
+        <td class="id-cell">${r.usedBy ? escape(r.usedBy) : '—'}</td>
+        <td>${fmtDate(r.createdAt)}</td>
+        <td>${fmtDate(r.usedAt)}</td>
+        <td class="actions">
+          <button class="ghost" onclick="navigator.clipboard.writeText('${r.code || r.id}'); window.__toast('تنسخ')">📋</button>
+          <button class="danger" onclick="window.__delCode('${r.id}')">حذف</button>
+        </td>
+      </tr>
+    `).join("");
+    area.innerHTML = `<div class="table-scroll"><table>
+      <thead><tr><th>الكود</th><th>المبلغ</th><th>الحالة</th><th>مستعمل من</th><th>تاريخ الإنشاء</th><th>تاريخ الاستعمال</th><th>أوامر</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table></div>`;
+  }
+
+  window.__toast = (s) => toast(s, "success");
+  window.__delCode = async (id) => {
+    if (!confirm("حذف هاد الكود؟")) return;
+    try {
+      await deleteDoc(doc(db, "recharge_codes", id));
+      toast("اتحذف", "success");
+      loadCodes();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+
+  async function generateCodes() {
+    const count = parseInt($("gen-count").value, 10);
+    const amount = parseInt($("gen-amount").value, 10);
+    const length = parseInt($("gen-length").value, 10);
+    const prefix = ($("gen-prefix").value || "").trim().toUpperCase();
+    const res = $("gen-result");
+    res.textContent = `جاري إنشاء ${count} كود…`;
+    const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // بدون 0/O/1/I لتفادي اللخبطة
+    const generated = [];
+    try {
+      for (let i = 0; i < count; i++) {
+        let body = "";
+        for (let j = 0; j < length; j++) {
+          body += charset.charAt(Math.floor(Math.random() * charset.length));
+        }
+        const code = prefix ? `${prefix}-${body}` : body;
+        await setDoc(doc(db, "recharge_codes", code), {
+          code,
+          amount,
+          isUsed: false,
+          usedBy: null,
+          createdAt: serverTimestamp(),
+          usedAt: null
+        });
+        generated.push(code);
+        res.textContent = `${i+1}/${count}…`;
+      }
+      res.innerHTML = `✅ تم إنشاء ${count} كود.<br><textarea readonly style="width:100%;min-height:100px;margin-top:8px;font-family:ui-monospace,monospace">${generated.join("\n")}</textarea>`;
+      toast(`${count} كود اتزادو`, "success");
+      loadCodes();
+    } catch (e) {
+      res.textContent = "خطأ: " + e.message;
+      toast("خطأ: " + e.message, "error");
+    }
+  }
+
+  loadCodes();
+}
+
+// Close modal on outside click
+$("modal-overlay").addEventListener("click", (e) => {
+  if (e.target.id === "modal-overlay") e.target.hidden = true;
+});
+
+</script>
+</body>
+</html>
