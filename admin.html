@@ -502,6 +502,7 @@ window.__fb = { db, doc, getDoc, getDocs, collection, query, where, limit, funct
 const COLLECTIONS = [
   { id: "dashboard", label: "لوحة القيادة", icon: "📊", special: true },
   { id: "users", label: "المستخدمين" },
+  { id: "unverified", label: "⏳ غير موثّقين", special: true },
   { id: "requests", label: "الطلبات" },
   { id: "post_offers", label: "العروض" },
   { id: "phone_reveals", label: "كشف الهاتف" },
@@ -651,9 +652,92 @@ function navigateTo(pageId) {
   if (pageId === "dashboard") renderDashboard();
   else if (pageId === "recharge_codes") renderRechargeCodes();
   else if (pageId === "appeals") window.renderAppeals();
+  else if (pageId === "unverified") renderUnverified();
   else renderCollection(pageId);
 }
+// ============================================================
+// UNVERIFIED WORKERS — حرفيين غير موثّقين
+// ============================================================
+async function renderUnverified() {
+  const page = $("page");
+  page.innerHTML = `
+    <div class="page-header">
+      <h2>⏳ حرفيين غير موثّقين</h2>
+      <div class="tools">
+        <input type="text" id="search" placeholder="بحث بالاسم…" style="width:240px">
+        <button class="ghost" id="refresh">🔄 تحديث</button>
+      </div>
+    </div>
+    <div id="table-area" class="loading"><div class="spinner"></div></div>
+  `;
 
+  let allRows = [];
+
+  async function load() {
+    const area = $("table-area");
+    area.className = "loading";
+    area.innerHTML = '<div class="spinner"></div>';
+    try {
+      const snap = await getDocs(collection(db, "users"));
+      allRows = [];
+      snap.forEach(d => {
+        const u = { id: d.id, ...d.data() };
+        const isWorker = u.category || u.domain;
+        if (isWorker && u.isVerified !== true) allRows.push(u);
+      });
+      render(allRows);
+    } catch (e) {
+      area.className = "";
+      area.innerHTML = `<div class="empty-state">خطأ: ${escape(e.message)}</div>`;
+    }
+  }
+
+  function render(rows) {
+    const area = $("table-area");
+    area.className = "table-wrap";
+    if (rows.length === 0) {
+      area.innerHTML = '<div class="empty-state">ما كاينش حرفيين غير موثّقين 🎉</div>';
+      return;
+    }
+    const body = rows.map(r => `
+      <tr>
+        <td>
+          ${r.profilePicUrl ? `<img src="${r.profilePicUrl}" style="width:40px;height:40px;border-radius:50%;object-fit:cover" onclick="window.__viewImg('${r.profilePicUrl}')">` : '<span style="color:var(--text-dim)">—</span>'}
+        </td>
+        <td style="font-weight:600">${escape(r.name || '—')}</td>
+        <td>${escape(r.category || r.domain || '—')}</td>
+        <td>${escape(r.city || '—')}</td>
+        <td>${escape(r.phone || '—')}</td>
+        <td>${r.idCardUrl ? `<img src="${r.idCardUrl}" style="max-width:60px;max-height:40px;border-radius:4px" onclick="window.__viewImg('${r.idCardUrl}')">` : '<span class="pill gray">لا توجد بطاقة</span>'}</td>
+        <td class="actions">
+          <button class="ghost" onclick="window.__view('users','${r.id}')">عرض</button>
+          <button class="success" onclick="window.__verifyUnv('${r.id}')">توثيق ✓</button>
+        </td>
+      </tr>
+    `).join("");
+    area.innerHTML = `<div class="table-scroll"><table>
+      <thead><tr><th>الصورة</th><th>الاسم</th><th>التخصص</th><th>المدينة</th><th>الهاتف</th><th>بطاقة التعريف</th><th>أوامر</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table></div>`;
+  }
+
+  $("refresh").onclick = load;
+  $("search").oninput = () => {
+    const q = $("search").value.toLowerCase().trim();
+    render(q ? allRows.filter(r => (r.name||"").toLowerCase().includes(q)) : allRows);
+  };
+
+  window.__view = (c, id) => openViewModal(c, id);
+  window.__verifyUnv = async (id) => {
+    try {
+      await updateDoc(doc(db, "users", id), { isVerified: true });
+      toast("اتوثّق ✓", "success");
+      load();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+
+  load();
+}
 // ============================================================
 // DASHBOARD
 // ============================================================
