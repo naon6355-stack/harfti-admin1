@@ -60,6 +60,12 @@
     font-size: 12px;
   }
   button.ghost:active { background: var(--bg-3); }
+  button.ghost.active {
+    background: var(--accent);
+    color: #1a1206;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
   button.danger {
     background: transparent;
     color: var(--danger);
@@ -646,6 +652,7 @@ window.__fb = { db, doc, getDoc, getDocs, collection, query, where, limit, order
 const COLLECTIONS = [
   { id: "dashboard", label: "📊 لوحة القيادة", special: true },
   { id: "users", label: "المستخدمين" },
+  { id: "pre_registrations", label: "📝 تسجيل مسبق", special: true },
   { id: "unverified", label: "⏳ غير موثّقين", special: true },
   { id: "requests", label: "الطلبات" },
   { id: "post_offers", label: "العروض" },
@@ -655,6 +662,7 @@ const COLLECTIONS = [
   { id: "banners", label: "البانرات" },
   { id: "community_posts", label: "منشورات المجتمع" },
   { id: "chats", label: "المحادثات" },
+  { id: "support", label: "🆘 الدعم", special: true },
   { id: "appeals", label: "⚖️ الطعون", special: true }
 ];
 
@@ -680,6 +688,26 @@ function fmtDate(v) {
   else d = new Date(v);
   if (isNaN(d)) return String(v);
   return d.toLocaleString("ar-DZ", { dateStyle: "short", timeStyle: "short" });
+}
+
+// يحوّل أي timestamp (Firestore Timestamp / seconds / number / string) لـ ms
+function toMs(v) {
+  if (!v) return 0;
+  if (v.toDate) return v.toDate().getTime();
+  if (typeof v === "object" && v.seconds) return v.seconds * 1000;
+  if (typeof v === "number") return v;
+  const d = new Date(v);
+  return isNaN(d) ? 0 : d.getTime();
+}
+
+// آخر ظهور للمستخدم (للأونلاين الحقيقي بدل isOnline الثابت)
+function lastSeenMs(u) {
+  return toMs(u.lastSeen || u.lastActive || u.lastOnline || u.lastSeenAt || u.onlineAt);
+}
+
+// تاريخ التسجيل/الإنشاء (للترتيب حسب الأحدث)
+function rowDateMs(r) {
+  return toMs(r.createdAt || r.joinedAt || r.registeredAt || r.timestamp || r.updatedAt);
 }
 
 function isImageUrl(s) {
@@ -805,6 +833,8 @@ function navigateTo(pageId) {
   });
   if (pageId === "dashboard") renderDashboard();
   else if (pageId === "recharge_codes") renderRechargeCodes();
+  else if (pageId === "pre_registrations") renderPreRegistrations();
+  else if (pageId === "support") renderSupport();
   else if (pageId === "appeals") { if (window.renderAppeals) window.renderAppeals(); else $("page").innerHTML = '<div class="empty-state">ملف appeals.js غير محمّل</div>'; }
   else if (pageId === "unverified") renderUnverified();
   else renderCollection(pageId);
@@ -952,13 +982,22 @@ async function renderDashboard() {
       getDocs(collection(db, "reviews"))
     ]);
 
-    let workers = 0, clients = 0, verified = 0, online = 0;
+    // أونلاين = نشط فآخر 5 دقايق (بدل isOnline لي يبقى true ديما)
+    const ONLINE_WINDOW_MS = 5 * 60 * 1000;
+    const nowMs = Date.now();
+    let workers = 0, clients = 0, verified = 0;
+    let onlineWorkers = 0, onlineClients = 0, hasPresence = false;
     usersSnap.forEach(d => {
       const u = d.data();
-      if (u.category || u.domain) workers++; else clients++;
+      const isW = !!(u.category || u.domain);
+      if (isW) workers++; else clients++;
       if (u.isVerified) verified++;
-      if (u.isOnline) online++;
+      const ls = lastSeenMs(u);
+      if (ls > 0) hasPresence = true;
+      const onlineNow = ls > 0 && (nowMs - ls) <= ONLINE_WINDOW_MS;
+      if (onlineNow) { if (isW) onlineWorkers++; else onlineClients++; }
     });
+    const online = onlineWorkers + onlineClients;
 
     const startToday = new Date(); startToday.setHours(0,0,0,0);
     let revealsToday = 0;
@@ -975,7 +1014,9 @@ async function renderDashboard() {
       { label: "إجمالي المستخدمين", value: usersSnap.size },
       { label: "حرفيين", value: workers, sub: `${verified} موثّق` },
       { label: "زبائن", value: clients },
-      { label: "أونلاين دروك", value: online, accent: true },
+      { label: "أونلاين دروك", value: online, accent: true, sub: hasPresence ? `${onlineWorkers} حرفي · ${onlineClients} زبون` : "⚠ ماكاش حقل lastSeen" },
+      { label: "حرفيين أونلاين", value: onlineWorkers, accent: true },
+      { label: "زبائن أونلاين", value: onlineClients, accent: true },
       { label: "إجمالي الطلبات", value: requestsSnap.size },
       { label: "كشف الهاتف اليوم", value: revealsToday, accent: true },
       { label: "كشف الهاتف (الكل)", value: revealsSnap.size },
@@ -1038,19 +1079,56 @@ async function renderCollection(colId) {
           <option value="200">200</option>
           <option value="500">500</option>
         </select>
+        <button class="ghost" id="sort-newest">🆕 الأحدث</button>
         <button class="ghost" id="refresh">🔄</button>
         <button class="primary" id="add-new">+ جديد</button>
       </div>
     </div>
+    ${colId === "users" ? `<div class="tools" id="type-filter" style="margin-bottom:16px;gap:8px">
+        <button class="ghost active" data-uf="all">الكل</button>
+        <button class="ghost" data-uf="worker">👷 حرفيين</button>
+        <button class="ghost" data-uf="client">🧑 زبائن</button>
+      </div>` : ""}
     <div id="table-area" class="loading"><div class="spinner"></div></div>
   `;
 
+  let allRows = [];
+  let viewFilter = "all";
+  let searchQ = "";
+  let sortNewest = (colId === "users"); // المستخدمين يبانو الأحدث أوّل تلقائيا
+
   $("refresh").onclick = () => loadCol();
   $("limit-sel").onchange = () => loadCol();
-  $("search").oninput = () => filterRows($("search").value);
+  $("search").oninput = () => { searchQ = $("search").value; applyView(); };
   $("add-new").onclick = () => openEditModal(colId, null, {});
 
-  let allRows = [];
+  const sortBtn = $("sort-newest");
+  if (sortNewest) sortBtn.classList.add("active");
+  sortBtn.onclick = () => { sortNewest = !sortNewest; sortBtn.classList.toggle("active", sortNewest); applyView(); };
+
+  if (colId === "users") {
+    document.querySelectorAll("#type-filter button").forEach(b => {
+      b.onclick = () => {
+        viewFilter = b.dataset.uf;
+        document.querySelectorAll("#type-filter button").forEach(x => x.classList.toggle("active", x === b));
+        applyView();
+      };
+    });
+  }
+
+  function applyView() {
+    let rows = allRows.slice();
+    if (colId === "users" && viewFilter !== "all") {
+      rows = rows.filter(r => {
+        const isW = !!(r.category || r.domain);
+        return viewFilter === "worker" ? isW : !isW;
+      });
+    }
+    const q = searchQ.toLowerCase().trim();
+    if (q) rows = rows.filter(r => JSON.stringify(r).toLowerCase().includes(q));
+    if (sortNewest) rows.sort((a, b) => rowDateMs(b) - rowDateMs(a));
+    renderRows(rows);
+  }
 
   async function loadCol() {
     const area = $("table-area");
@@ -1061,7 +1139,7 @@ async function renderCollection(colId) {
       const snap = await getDocs(query(collection(db, colId), limit(lim)));
       allRows = [];
       snap.forEach(d => allRows.push({ id: d.id, ...d.data() }));
-      renderRows(allRows);
+      applyView();
     } catch (e) {
       console.error(e);
       area.className = "";
@@ -1135,13 +1213,21 @@ async function renderCollection(colId) {
       loadCol();
     } catch (e) { toast("خطأ: " + e.message, "error"); }
   };
+  window.__block = async (id, val) => {
+    if (val && !confirm("متأكد باش تبلوكي هاد الحساب؟")) return;
+    try {
+      await updateDoc(doc(db, "users", id), { isBlocked: val });
+      toast(val ? "اتبلوكا 🚫" : "اتفكّ البلوك", "success");
+      loadCol();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
 
   loadCol();
 }
 
 function pickKeyFields(colId, rows) {
   const presets = {
-    users: ["name", "phone", "category", "city", "isVerified", "isOnline"],
+    users: ["name", "phone", "category", "city", "isVerified", "isBlocked", "createdAt"],
     requests: ["status", "category", "clientId", "workerId", "createdAt"],
     post_offers: ["workerId", "requestId", "price", "status"],
     phone_reveals: ["clientId", "workerId", "timestamp", "cost"],
@@ -1158,6 +1244,7 @@ function pickKeyFields(colId, rows) {
 
 function renderCell(v, key, row, colId) {
   if (v === undefined || v === null) return '<span style="color:var(--text-dim)">—</span>';
+  if (key === "isBlocked") return v ? '<span class="pill red">🚫 محظور</span>' : '<span class="pill green">✓</span>';
   if (typeof v === "boolean") return v ? '<span class="pill green">✓</span>' : '<span class="pill red">✗</span>';
   if (key === "isVerified" || key === "isOnline" || key === "isUsed" || key === "used" || key === "isActive" || key === "isProfileComplete") {
     return v ? '<span class="pill green">✓</span>' : '<span class="pill red">✗</span>';
@@ -1182,9 +1269,13 @@ function renderCell(v, key, row, colId) {
 
 function specialActions(colId, row) {
   if (colId === "users") {
-    return row.isVerified
+    const verifyBtn = row.isVerified
       ? `<button class="ghost" onclick="window.__verify('${row.id}', false)">رفع التوثيق</button>`
       : `<button class="success" onclick="window.__verify('${row.id}', true)">توثيق ✓</button>`;
+    const blockBtn = row.isBlocked
+      ? `<button class="success" onclick="window.__block('${row.id}', false)">فك البلوك</button>`
+      : `<button class="danger" onclick="window.__block('${row.id}', true)">🚫 بلوك</button>`;
+    return verifyBtn + blockBtn;
   }
   return "";
 }
@@ -1373,7 +1464,7 @@ async function renderRechargeCodes() {
       <div class="gen-row">
         <div><label>العدد</label><input type="number" id="gen-count" value="10" min="1" max="500"></div>
         <div><label>القيمة (value)</label><input type="number" id="gen-amount" value="1000" min="1"></div>
-        <div><label>طول الكود</label><input type="number" id="gen-length" value="10" min="6" max="20"></div>
+        <div><label>طول الكود</label><input type="number" id="gen-length" value="25" min="6" max="32"></div>
         <div><label>Prefix (اختياري)</label><input type="text" id="gen-prefix" placeholder="مثلا HRF" maxlength="5"></div>
         <div style="flex:0"><button class="primary" id="gen-btn">توليد</button></div>
       </div>
@@ -1505,12 +1596,476 @@ async function renderRechargeCodes() {
   loadCodes();
 }
 
+// ============================================================
+// PRE-REGISTRATIONS (قبول حسابات pre-register)
+// ============================================================
+async function renderPreRegistrations() {
+  const page = $("page");
+  page.innerHTML = `
+    <div class="page-header">
+      <h2>📝 تسجيل مسبق</h2>
+      <div class="tools">
+        <input type="text" id="search" placeholder="بحث بالاسم/الهاتف…" style="width:220px">
+        <button class="ghost" id="refresh">🔄</button>
+      </div>
+    </div>
+    <div class="tools" style="margin-bottom:16px;gap:8px;display:flex;flex-wrap:wrap">
+      <button class="ghost active" data-f="pending">⏳ في الانتظار</button>
+      <button class="ghost" data-f="approved">✓ مقبولين</button>
+      <button class="ghost" data-f="rejected">✗ مرفوضين</button>
+      <button class="ghost" data-f="all">الكل</button>
+    </div>
+    <div id="table-area" class="loading"><div class="spinner"></div></div>
+  `;
+
+  let allRows = [];
+  let viewFilter = "pending";
+  let searchQ = "";
+
+  function prStatus(r) {
+    if (r.approved === true || r.status === "approved") return "approved";
+    if (r.approved === false || r.status === "rejected") return "rejected";
+    return "pending";
+  }
+
+  async function load() {
+    const area = $("table-area");
+    area.className = "loading";
+    area.innerHTML = '<div class="spinner"></div>';
+    try {
+      const snap = await getDocs(query(collection(db, "pre_registrations"), limit(500)));
+      allRows = [];
+      snap.forEach(d => allRows.push({ id: d.id, ...d.data() }));
+      apply();
+    } catch (e) {
+      area.className = "";
+      area.innerHTML = `<div class="empty-state">خطأ: ${escape(e.message)}</div>`;
+    }
+  }
+
+  function apply() {
+    let rows = allRows.slice();
+    if (viewFilter !== "all") rows = rows.filter(r => prStatus(r) === viewFilter);
+    if (searchQ) {
+      const q = searchQ.toLowerCase();
+      rows = rows.filter(r => JSON.stringify(r).toLowerCase().includes(q));
+    }
+    rows.sort((a, b) => rowDateMs(b) - rowDateMs(a));
+    render(rows);
+  }
+
+  function statusPill(st) {
+    if (st === "approved") return '<span class="pill green">✓ مقبول</span>';
+    if (st === "rejected") return '<span class="pill red">✗ مرفوض</span>';
+    return '<span class="pill amber">⏳ في الانتظار</span>';
+  }
+
+  function render(rows) {
+    const area = $("table-area");
+    if (rows.length === 0) {
+      area.className = "";
+      area.innerHTML = '<div class="empty-state">ما كاينش تسجيلات هنا</div>';
+      return;
+    }
+    area.className = "table-wrap auto-cards";
+    const pic = r => (r.profilePicUrl || r.profilePic || r.photoUrl);
+    const cat = r => (r.category || r.domain || '—');
+    const city = r => (r.city || r.wilaya || '—');
+    const phone = r => (r.phone || r.id || '—');
+
+    const rowBtns = r => {
+      const st = prStatus(r);
+      let b = `<button class="ghost" onclick="window.__view('pre_registrations','${r.id}')">عرض</button>`;
+      if (st !== "approved") b += `<button class="success" onclick="window.__prApprove('${r.id}')">قبول ✓</button>`;
+      if (st !== "rejected") b += `<button class="danger" onclick="window.__prReject('${r.id}')">رفض ✗</button>`;
+      b += `<button class="danger" onclick="window.__prDelete('${r.id}')">حذف</button>`;
+      return b;
+    };
+
+    const tableBody = rows.map(r => `
+      <tr>
+        <td>${pic(r) ? `<img src="${pic(r)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover" onclick="window.__viewImg('${pic(r)}')">` : '—'}</td>
+        <td style="font-weight:600">${escape(r.name || '—')}</td>
+        <td>${escape(phone(r))}</td>
+        <td>${escape(cat(r))}</td>
+        <td>${escape(city(r))}</td>
+        <td>${statusPill(prStatus(r))}</td>
+        <td>${fmtDate(r.createdAt || r.timestamp)}</td>
+        <td class="actions">${rowBtns(r)}</td>
+      </tr>
+    `).join("");
+
+    const cards = rows.map(r => `
+      <div class="data-card">
+        <div class="dc-head">
+          <div style="display:flex;align-items:center;gap:10px">
+            ${pic(r) ? `<img src="${pic(r)}" style="width:44px;height:44px;border-radius:50%;object-fit:cover" onclick="window.__viewImg('${pic(r)}')">` : ''}
+            <strong>${escape(r.name || '—')}</strong>
+          </div>
+          ${statusPill(prStatus(r))}
+        </div>
+        <div class="dc-row"><span class="dc-key">الهاتف</span><span class="dc-val">${escape(phone(r))}</span></div>
+        <div class="dc-row"><span class="dc-key">التخصص</span><span class="dc-val">${escape(cat(r))}</span></div>
+        <div class="dc-row"><span class="dc-key">المدينة</span><span class="dc-val">${escape(city(r))}</span></div>
+        <div class="dc-row"><span class="dc-key">التاريخ</span><span class="dc-val">${fmtDate(r.createdAt || r.timestamp)}</span></div>
+        <div class="dc-actions">${rowBtns(r)}</div>
+      </div>
+    `).join("");
+
+    area.innerHTML = `
+      <div class="table-scroll"><table>
+        <thead><tr><th>الصورة</th><th>الاسم</th><th>الهاتف</th><th>التخصص</th><th>المدينة</th><th>الحالة</th><th>التاريخ</th><th>أوامر</th></tr></thead>
+        <tbody>${tableBody}</tbody>
+      </table></div>
+      <div class="cards-list active">${cards}</div>
+    `;
+  }
+
+  $("refresh").onclick = load;
+  $("search").oninput = () => { searchQ = $("search").value.trim(); apply(); };
+  document.querySelectorAll('[data-f]').forEach(btn => {
+    btn.onclick = () => {
+      viewFilter = btn.dataset.f;
+      document.querySelectorAll('[data-f]').forEach(b => b.classList.toggle('active', b === btn));
+      apply();
+    };
+  });
+
+  window.__view = (c, id) => openViewModal(c, id);
+  window.__prApprove = async (id) => {
+    try {
+      await updateDoc(doc(db, "pre_registrations", id), { approved: true, status: "approved", approvedAt: serverTimestamp() });
+      toast("اتقبل ✓", "success");
+      load();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+  window.__prReject = async (id) => {
+    if (!confirm("متأكد باش ترفض هاد التسجيل؟")) return;
+    try {
+      await updateDoc(doc(db, "pre_registrations", id), { approved: false, status: "rejected", rejectedAt: serverTimestamp() });
+      toast("اترفض", "success");
+      load();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+  window.__prDelete = async (id) => {
+    if (!confirm(`حذف التسجيل ${id}؟`)) return;
+    try {
+      await deleteDoc(doc(db, "pre_registrations", id));
+      toast("اتحذف", "success");
+      load();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+
+  load();
+}
+
+// ============================================================
+// SUPPORT (الدعم)
+// ============================================================
+const SUPPORT_COL = "support_messages";
+
+async function renderSupport() {
+  const page = $("page");
+  page.innerHTML = `
+    <div class="page-header">
+      <h2>🆘 الدعم</h2>
+      <div class="tools">
+        <input type="text" id="search" placeholder="بحث…" style="width:220px">
+        <button class="ghost" id="refresh">🔄</button>
+      </div>
+    </div>
+    <div class="tools" style="margin-bottom:16px;gap:8px;display:flex;flex-wrap:wrap">
+      <button class="ghost active" data-f="new">🆕 جداد</button>
+      <button class="ghost" data-f="replied">✓ مردود عليهم</button>
+      <button class="ghost" data-f="all">الكل</button>
+    </div>
+    <div id="table-area" class="loading"><div class="spinner"></div></div>
+  `;
+
+  let allRows = [];
+  let viewFilter = "new";
+  let searchQ = "";
+
+  const senderName = r => (r.userName || r.name || r.senderName || r.email || r.userId || r.uid || "مستخدم");
+  const senderUid = r => (r.userId || r.uid || r.senderId || null);
+  const msgText = r => (r.message || r.text || r.body || "");
+  const spStatus = r => ((r.status === "replied" || r.adminReply) ? "replied" : "new");
+
+  async function load() {
+    const area = $("table-area");
+    area.className = "loading";
+    area.innerHTML = '<div class="spinner"></div>';
+    try {
+      const snap = await getDocs(query(collection(db, SUPPORT_COL), limit(500)));
+      allRows = [];
+      snap.forEach(d => allRows.push({ id: d.id, ...d.data() }));
+      apply();
+    } catch (e) {
+      area.className = "";
+      area.innerHTML = `<div class="empty-state">خطأ: ${escape(e.message)}<br><span style="font-size:11px">⚠ تأكد بلي collection سميتو <b>${SUPPORT_COL}</b></span></div>`;
+    }
+  }
+
+  function apply() {
+    let rows = allRows.slice();
+    if (viewFilter !== "all") rows = rows.filter(r => spStatus(r) === viewFilter);
+    if (searchQ) {
+      const q = searchQ.toLowerCase();
+      rows = rows.filter(r => JSON.stringify(r).toLowerCase().includes(q));
+    }
+    rows.sort((a, b) => rowDateMs(b) - rowDateMs(a));
+    render(rows);
+  }
+
+  function render(rows) {
+    const area = $("table-area");
+    if (rows.length === 0) {
+      area.className = "";
+      area.innerHTML = '<div class="empty-state">ما كاينش رسائل دعم</div>';
+      return;
+    }
+    area.className = "";
+    area.innerHTML = `<div class="cards-list active" style="display:flex">${rows.map(r => {
+      const uid = senderUid(r);
+      const st = spStatus(r);
+      return `
+      <div class="data-card">
+        <div class="dc-head">
+          <strong>${escape(senderName(r))}</strong>
+          ${st === "replied" ? '<span class="pill green">✓ مردود</span>' : '<span class="pill amber">🆕 جديد</span>'}
+        </div>
+        <div class="dc-row"><span class="dc-key">الرسالة</span><span class="dc-val" style="white-space:pre-wrap">${escape(msgText(r))}</span></div>
+        ${uid ? `<div class="dc-row"><span class="dc-key">UID</span><span class="dc-val" style="font-family:ui-monospace,monospace;font-size:11px">${escape(uid)}</span></div>` : ''}
+        <div class="dc-row"><span class="dc-key">التاريخ</span><span class="dc-val">${fmtDate(r.createdAt || r.timestamp)}</span></div>
+        ${r.adminReply ? `<div class="dc-row"><span class="dc-key">ردّك</span><span class="dc-val" style="color:var(--success);white-space:pre-wrap">${escape(r.adminReply)}</span></div>` : ''}
+        <div class="dc-actions">
+          <button class="primary" onclick="window.__spReply('${r.id}')">💬 رد</button>
+          ${uid ? `<button class="danger" onclick="window.__spBlock('${uid}')">🚫 بلوك</button>` : ''}
+          <button class="danger" onclick="window.__spDelete('${r.id}')">حذف</button>
+        </div>
+      </div>`;
+    }).join("")}</div>`;
+  }
+
+  $("refresh").onclick = load;
+  $("search").oninput = () => { searchQ = $("search").value.trim(); apply(); };
+  document.querySelectorAll('[data-f]').forEach(btn => {
+    btn.onclick = () => {
+      viewFilter = btn.dataset.f;
+      document.querySelectorAll('[data-f]').forEach(b => b.classList.toggle('active', b === btn));
+      apply();
+    };
+  });
+
+  window.__spReply = (id) => {
+    const r = allRows.find(x => x.id === id) || {};
+    const m = $("modal");
+    const ov = $("modal-overlay");
+    m.innerHTML = `
+      <h3>رد على ${escape(senderName(r))}</h3>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:14px;white-space:pre-wrap;font-size:13px">${escape(msgText(r) || "—")}</div>
+      <div class="edit-field">
+        <label>ردّك</label>
+        <textarea id="sp-reply-text" placeholder="اكتب الرد هنا…">${escape(r.adminReply || "")}</textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="primary" id="sp-reply-save">إرسال الرد</button>
+        <button class="ghost" onclick="document.getElementById('modal-overlay').hidden=true">إلغاء</button>
+      </div>
+    `;
+    ov.hidden = false;
+    $("sp-reply-save").onclick = async () => {
+      const txt = $("sp-reply-text").value.trim();
+      if (!txt) { toast("اكتب الرد لول", "error"); return; }
+      try {
+        await updateDoc(doc(db, SUPPORT_COL, id), { adminReply: txt, status: "replied", repliedAt: serverTimestamp() });
+        toast("اتبعث الرد ✓", "success");
+        ov.hidden = true;
+        load();
+      } catch (e) { toast("خطأ: " + e.message, "error"); }
+    };
+  };
+  window.__spBlock = async (uid) => {
+    if (!confirm("متأكد باش تبلوكي هاد المستخدم؟")) return;
+    try {
+      const snap = await getDoc(doc(db, "users", uid));
+      const cur = snap.exists() ? snap.data().isBlocked === true : false;
+      await updateDoc(doc(db, "users", uid), { isBlocked: !cur });
+      toast(!cur ? "اتبلوكا 🚫" : "اتفكّ البلوك", "success");
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+  window.__spDelete = async (id) => {
+    if (!confirm("حذف هاد الرسالة؟")) return;
+    try {
+      await deleteDoc(doc(db, SUPPORT_COL, id));
+      toast("اتحذف", "success");
+      load();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+
+  load();
+}
+
+// ============================================================
+// APPEALS (الطعون) — وضّح شكون لي ألغى العملية: حرفي ام زبون
+// ============================================================
+window.renderAppeals = async function () {
+  const page = $("page");
+  page.innerHTML = `
+    <div class="page-header">
+      <h2>⚖️ الطعون</h2>
+      <div class="tools">
+        <input type="text" id="search" placeholder="بحث…" style="width:220px">
+        <button class="ghost" id="refresh">🔄</button>
+      </div>
+    </div>
+    <div id="table-area" class="loading"><div class="spinner"></div></div>
+  `;
+
+  let allRows = [];
+  let searchQ = "";
+  const reqCache = {};
+
+  async function getReq(id) {
+    if (!id) return null;
+    if (reqCache[id] !== undefined) return reqCache[id];
+    let found = null;
+    for (const col of ["requests", "post_offers", "community_posts"]) {
+      try {
+        const s = await getDoc(doc(db, col, id));
+        if (s.exists()) { found = s.data(); break; }
+      } catch (e) { /* skip */ }
+    }
+    reqCache[id] = found;
+    return found;
+  }
+
+  function whoCancelled(a, req) {
+    // 1) حقل صريح بالنوع
+    const typeField = (a.cancelledByType || a.canceledByType || a.cancelledByRole || a.cancelledByUserType || a.cancelledByUserRole || "").toString().toLowerCase();
+    if (typeField.includes("work") || typeField.includes("حرف")) return "worker";
+    if (typeField.includes("client") || typeField.includes("زب")) return "client";
+
+    // 2) قارن id تاع لي ألغى مع worker/client
+    const by = a.cancelledBy || a.canceledBy || a.cancelledByUid || a.byUid || null;
+    if (by) {
+      const wid = a.workerId || a.workerUid || (req && (req.workerId || req.workerUid));
+      const cid = a.clientId || a.clientUid || (req && (req.clientId || req.clientUid));
+      if (wid && by === wid) return "worker";
+      if (cid && by === cid) return "client";
+    }
+    return null;
+  }
+
+  function whoPill(who) {
+    if (who === "worker") return '<span class="pill amber">👷 ألغاها الحرفي</span>';
+    if (who === "client") return '<span class="pill blue">🧑 ألغاها الزبون</span>';
+    return '<span class="pill gray">غير معروف</span>';
+  }
+
+  async function load() {
+    const area = $("table-area");
+    area.className = "loading";
+    area.innerHTML = '<div class="spinner"></div>';
+    try {
+      const snap = await getDocs(query(collection(db, "appeals"), limit(500)));
+      allRows = [];
+      snap.forEach(d => allRows.push({ id: d.id, ...d.data() }));
+      await Promise.all(allRows.map(async (a) => {
+        const linkId = a.requestId || a.postId || a.orderId || a.requestUid || null;
+        const req = await getReq(linkId);
+        a.__who = whoCancelled(a, req);
+      }));
+      apply();
+    } catch (e) {
+      area.className = "";
+      area.innerHTML = `<div class="empty-state">خطأ: ${escape(e.message)}</div>`;
+    }
+  }
+
+  function apply() {
+    let rows = allRows.slice();
+    if (searchQ) {
+      const q = searchQ.toLowerCase();
+      rows = rows.filter(r => JSON.stringify(r).toLowerCase().includes(q));
+    }
+    rows.sort((a, b) => rowDateMs(b) - rowDateMs(a));
+    render(rows);
+  }
+
+  function render(rows) {
+    const area = $("table-area");
+    if (rows.length === 0) {
+      area.className = "";
+      area.innerHTML = '<div class="empty-state">ما كاينش طعون</div>';
+      return;
+    }
+    area.className = "table-wrap auto-cards";
+    const reason = r => (r.reason || r.message || r.text || r.note || "—");
+
+    const tableBody = rows.map(r => `
+      <tr>
+        <td class="id-cell" title="${escape(r.id)}">${escape(r.id.slice(0, 12))}…</td>
+        <td>${whoPill(r.__who)}</td>
+        <td>${escape(String(reason(r)).slice(0, 60))}</td>
+        <td><span class="pill ${r.status === 'resolved' || r.status === 'accepted' ? 'green' : r.status === 'pending' ? 'amber' : 'gray'}">${escape(r.status || '—')}</span></td>
+        <td>${fmtDate(r.createdAt || r.timestamp)}</td>
+        <td class="actions">
+          <button class="ghost" onclick="window.__view('appeals','${r.id}')">عرض</button>
+          <button class="danger" onclick="window.__delAppeal('${r.id}')">حذف</button>
+        </td>
+      </tr>
+    `).join("");
+
+    const cards = rows.map(r => `
+      <div class="data-card">
+        <div class="dc-head">
+          <span class="dc-id">${escape(r.id)}</span>
+          ${whoPill(r.__who)}
+        </div>
+        <div class="dc-row"><span class="dc-key">السبب</span><span class="dc-val" style="white-space:pre-wrap">${escape(String(reason(r)))}</span></div>
+        <div class="dc-row"><span class="dc-key">الحالة</span><span class="dc-val"><span class="pill ${r.status === 'resolved' || r.status === 'accepted' ? 'green' : r.status === 'pending' ? 'amber' : 'gray'}">${escape(r.status || '—')}</span></span></div>
+        <div class="dc-row"><span class="dc-key">التاريخ</span><span class="dc-val">${fmtDate(r.createdAt || r.timestamp)}</span></div>
+        <div class="dc-actions">
+          <button class="ghost" onclick="window.__view('appeals','${r.id}')">عرض</button>
+          <button class="danger" onclick="window.__delAppeal('${r.id}')">حذف</button>
+        </div>
+      </div>
+    `).join("");
+
+    area.innerHTML = `
+      <div class="table-scroll"><table>
+        <thead><tr><th>ID</th><th>شكون ألغى</th><th>السبب</th><th>الحالة</th><th>التاريخ</th><th>أوامر</th></tr></thead>
+        <tbody>${tableBody}</tbody>
+      </table></div>
+      <div class="cards-list active">${cards}</div>
+    `;
+  }
+
+  $("refresh").onclick = load;
+  $("search").oninput = () => { searchQ = $("search").value.trim(); apply(); };
+
+  window.__view = (c, id) => openViewModal(c, id);
+  window.__delAppeal = async (id) => {
+    if (!confirm(`حذف الطعن ${id}؟`)) return;
+    try {
+      await deleteDoc(doc(db, "appeals", id));
+      toast("اتحذف", "success");
+      load();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+
+  load();
+};
+
 // Close modal on outside click
 $("modal-overlay").addEventListener("click", (e) => {
   if (e.target.id === "modal-overlay") e.target.hidden = true;
 });
 
 </script>
-<script type="module" src="appeals.js"></script>
+<!-- appeals.js اتعطّل: ولّينا نستعملو renderAppeals داخلي (يبيّن شكون ألغى العملية).
+     إذا كان appeals.js فيه منطق زايد تحب تحتفظ بيه، ابعثهولي ندمجوه. -->
+<!-- <script type="module" src="appeals.js"></script> -->
 </body>
 </html>
