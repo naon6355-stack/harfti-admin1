@@ -1,0 +1,2071 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Harfti Admin</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --bg-2: #131922;
+    --bg-3: #1b2330;
+    --border: #2a3441;
+    --text: #e6edf3;
+    --text-dim: #8b96a5;
+    --accent: #f5a623;
+    --accent-dim: #b87a1a;
+    --success: #3fb950;
+    --danger: #f85149;
+    --info: #58a6ff;
+    --sidebar-w: 240px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "Segoe UI", "Cairo", "Tahoma", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+  button { font-family: inherit; cursor: pointer; }
+  input, select, textarea {
+    font-family: inherit;
+    background: var(--bg-3);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 16px; /* 16px يمنع zoom التلقائي فـ iOS */
+    outline: none;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  button.primary {
+    background: var(--accent);
+    color: #1a1206;
+    border: none;
+    padding: 9px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  button.primary:active { background: #ffb840; }
+  button.ghost {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  button.ghost:active { background: var(--bg-3); }
+  button.ghost.active {
+    background: var(--accent);
+    color: #1a1206;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+  button.danger {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  button.danger:active { background: rgba(248, 81, 73, 0.1); }
+  button.success {
+    background: var(--success);
+    color: #fff;
+    border: none;
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+
+  /* === LOGIN === */
+  #login-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .login-box {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    width: 100%;
+    max-width: 400px;
+  }
+  .login-box h1 {
+    color: var(--accent);
+    font-size: 28px;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+  .login-box p { color: var(--text-dim); margin-bottom: 24px; font-size: 13px; }
+  .login-box input { width: 100%; margin-bottom: 12px; padding: 12px 14px; }
+  .login-box button { width: 100%; padding: 13px; font-size: 15px; }
+  .login-error {
+    color: var(--danger);
+    font-size: 12px;
+    margin-top: 10px;
+    min-height: 16px;
+  }
+
+  /* === TOPBAR (mobile only) === */
+  .topbar {
+    display: none;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    align-items: center;
+    gap: 12px;
+  }
+  .topbar .hamburger {
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 40px; height: 40px;
+    border-radius: 8px;
+    font-size: 20px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .topbar h1 { color: var(--accent); font-size: 20px; }
+
+  /* === LAYOUT === */
+  #app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; }
+  aside.sidebar {
+    background: var(--bg-2);
+    border-left: 1px solid var(--border);
+    padding: 16px 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .brand {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .brand h1 {
+    color: var(--accent);
+    font-size: 22px;
+    letter-spacing: -0.5px;
+  }
+  .brand .who {
+    color: var(--text-dim);
+    font-size: 11px;
+    margin-top: 4px;
+    word-break: break-all;
+  }
+  .brand .close-drawer {
+    display: none;
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  nav.nav { display: flex; flex-direction: column; padding: 0 8px; }
+  nav.nav button {
+    background: transparent;
+    color: var(--text);
+    border: none;
+    text-align: right;
+    padding: 12px 14px;
+    border-radius: 6px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+  }
+  nav.nav button:active { background: var(--bg-3); }
+  nav.nav button.active {
+    background: var(--bg-3);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  nav.nav button .badge {
+    background: var(--bg);
+    color: var(--text-dim);
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 10px;
+  }
+  .logout-btn {
+    margin: 16px 8px;
+    width: calc(100% - 16px);
+    padding: 12px;
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+  }
+
+  /* drawer backdrop */
+  .drawer-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 60;
+  }
+
+  main.content { padding: 24px 32px; overflow-x: hidden; min-width: 0; }
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .page-header h2 { font-size: 24px; letter-spacing: -0.3px; }
+  .page-header .tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  /* === DASHBOARD === */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .stat-card {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .stat-card .label {
+    color: var(--text-dim);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .stat-card .value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .stat-card .value.accent { color: var(--accent); }
+  .stat-card .sub { color: var(--text-dim); font-size: 11px; margin-top: 4px; }
+
+  /* === TABLE === */
+  .table-wrap {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .table-scroll { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead { background: var(--bg-3); }
+  th, td {
+    padding: 12px 14px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  th {
+    color: var(--text-dim);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  tbody tr:active { background: var(--bg-3); }
+  td.actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  td.id-cell {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .pill.green { background: rgba(63, 185, 80, 0.15); color: var(--success); }
+  .pill.red { background: rgba(248, 81, 73, 0.15); color: var(--danger); }
+  .pill.gray { background: var(--bg-3); color: var(--text-dim); }
+  .pill.amber { background: rgba(245, 166, 35, 0.15); color: var(--accent); }
+  .pill.blue { background: rgba(88, 166, 255, 0.15); color: var(--info); }
+
+  .empty-state {
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--text-dim);
+  }
+  .loading {
+    padding: 40px;
+    text-align: center;
+    color: var(--text-dim);
+  }
+  .spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* === MOBILE CARDS (hidden on desktop) === */
+  .cards-list { display: none; flex-direction: column; gap: 12px; }
+  .data-card {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .data-card .dc-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .data-card .dc-id {
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    word-break: break-all;
+  }
+  .data-card .dc-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 4px 0;
+    font-size: 13px;
+  }
+  .data-card .dc-row .dc-key { color: var(--text-dim); font-size: 12px; }
+  .data-card .dc-row .dc-val { text-align: left; word-break: break-word; }
+  .data-card .dc-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .data-card .dc-actions button { flex: 1; min-width: 70px; padding: 10px; }
+
+  /* === MODAL === */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .modal-overlay[hidden] { display: none; }
+  .modal {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    max-width: 700px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 24px;
+  }
+  .modal h3 {
+    margin-bottom: 16px;
+    color: var(--accent);
+    font-size: 18px;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-start;
+    margin-top: 20px;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    flex-wrap: wrap;
+  }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    align-items: start;
+  }
+  .field-row:last-child { border-bottom: none; }
+  .field-key {
+    color: var(--text-dim);
+    font-size: 12px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    padding-top: 4px;
+  }
+  .field-val { font-size: 13px; word-break: break-word; }
+  .field-val img {
+    max-width: 100px;
+    max-height: 100px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    margin: 2px;
+  }
+  .field-val.array-val { display: flex; flex-wrap: wrap; gap: 4px; }
+  .field-val pre {
+    background: var(--bg);
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+  }
+
+  /* Edit modal */
+  .edit-field { margin-bottom: 14px; }
+  .edit-field label {
+    display: block;
+    color: var(--text-dim);
+    font-size: 11px;
+    margin-bottom: 4px;
+    font-family: ui-monospace, monospace;
+  }
+  .edit-field input, .edit-field textarea, .edit-field select { width: 100%; }
+  .edit-field textarea { min-height: 60px; font-family: ui-monospace, monospace; font-size: 13px; }
+  .edit-field .type-hint {
+    display: inline-block;
+    background: var(--bg);
+    color: var(--text-dim);
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-right: 6px;
+  }
+
+  /* Image viewer */
+  .img-viewer {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    cursor: zoom-out;
+    padding: 12px;
+  }
+  .img-viewer[hidden] { display: none; }
+  .img-viewer img { max-width: 95vw; max-height: 95vh; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    left: 24px;
+    margin: 0 auto;
+    max-width: 360px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-right: 3px solid var(--accent);
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    z-index: 300;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    animation: slideIn 0.2s;
+  }
+  .toast.error { border-right-color: var(--danger); }
+  .toast.success { border-right-color: var(--success); }
+  @keyframes slideIn { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  /* Recharge code generator */
+  .gen-box {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .gen-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+  .gen-row > div { flex: 1; min-width: 140px; }
+  .gen-row label { display: block; font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+
+  /* ============ MOBILE BREAKPOINT ============ */
+  @media (max-width: 820px) {
+    #app { grid-template-columns: 1fr; }
+    .topbar { display: flex; }
+
+    /* sidebar becomes a slide-in drawer */
+    aside.sidebar {
+      position: fixed;
+      top: 0;
+      right: 0;
+      height: 100vh;
+      width: 82vw;
+      max-width: 300px;
+      z-index: 70;
+      transform: translateX(100%);
+      transition: transform 0.25s ease;
+      border-left: none;
+      border-right: 1px solid var(--border);
+    }
+    #app.drawer-open aside.sidebar { transform: translateX(0); }
+    #app.drawer-open .drawer-backdrop { display: block; }
+    .brand .close-drawer { display: flex; align-items: center; justify-content: center; }
+
+    main.content { padding: 16px; }
+    .page-header h2 { font-size: 20px; }
+    .page-header .tools { width: 100%; }
+    .page-header .tools input[type="text"] { flex: 1; min-width: 0; width: auto !important; }
+
+    /* hide tables, show cards */
+    .table-wrap.auto-cards .table-scroll { display: none; }
+    .table-wrap.auto-cards { background: transparent; border: none; }
+    .cards-list.active { display: flex; }
+
+    .field-row { grid-template-columns: 1fr; gap: 4px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .stat-card { padding: 14px; }
+    .stat-card .value { font-size: 22px; }
+    .modal { padding: 18px; }
+    .gen-row > div { min-width: 100%; }
+  }
+
+  @media (max-width: 380px) {
+    .stats-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>Harfti</h1>
+    <p>لوحة التحكم — Admin Panel</p>
+    <input id="login-email" type="email" placeholder="Email" autocomplete="email">
+    <input id="login-pass" type="password" placeholder="Password" autocomplete="current-password">
+    <button class="primary" id="login-btn">دخول</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" hidden>
+  <!-- mobile topbar -->
+  <div class="topbar">
+    <button class="hamburger" id="hamburger">☰</button>
+    <h1>Harfti</h1>
+  </div>
+
+  <!-- drawer backdrop -->
+  <div class="drawer-backdrop" id="drawer-backdrop"></div>
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div>
+        <h1>Harfti</h1>
+        <div class="who" id="who"></div>
+      </div>
+      <button class="close-drawer" id="close-drawer">✕</button>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <button class="logout-btn" id="logout-btn">خروج</button>
+  </aside>
+
+  <main class="content">
+    <div id="page"></div>
+  </main>
+</div>
+
+<!-- Modals -->
+<div class="modal-overlay" id="modal-overlay" hidden>
+  <div class="modal" id="modal"></div>
+</div>
+<div class="img-viewer" id="img-viewer" hidden onclick="this.hidden=true"></div>
+
+<script type="module">
+// ============================================================
+// 🔧 FIREBASE CONFIG
+// ============================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyBxeghvR8tAK9_xvHfqoAkfV_kC35Lv3_U",
+  authDomain: "harfti-a488e.firebaseapp.com",
+  databaseURL: "https://harfti-a488e-default-rtdb.firebaseio.com",
+  projectId: "harfti-a488e",
+  storageBucket: "harfti-a488e.firebasestorage.app",
+  messagingSenderId: "312456421531",
+  appId: "1:312456421531:web:6e02228a3283fb6eab663e",
+  measurementId: "G-8PZZV90N2P"
+};
+
+const ADMIN_EMAIL = "naon64755@gmail.com";
+
+// ============================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, collection, getDocs, getDoc, doc, query, limit, orderBy,
+  where, updateDoc, deleteDoc, setDoc, addDoc, serverTimestamp, Timestamp
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const functions = getFunctions(app, "us-central1");
+
+// expose for appeals.js
+window.__fb = { db, doc, getDoc, getDocs, collection, query, where, limit, orderBy, updateDoc, deleteDoc, setDoc, addDoc, functions, httpsCallable, escape, fmtDate, toast };
+
+// ============================================================
+// COLLECTIONS CONFIG
+// ============================================================
+const COLLECTIONS = [
+  { id: "dashboard", label: "📊 لوحة القيادة", special: true },
+  { id: "users", label: "المستخدمين" },
+  { id: "pre_registrations", label: "📝 تسجيل مسبق", special: true },
+  { id: "unverified", label: "⏳ غير موثّقين", special: true },
+  { id: "requests", label: "الطلبات" },
+  { id: "post_offers", label: "العروض" },
+  { id: "phone_reveals", label: "كشف الهاتف" },
+  { id: "reviews", label: "التقييمات" },
+  { id: "recharge_codes", label: "كودات الشحن" },
+  { id: "banners", label: "البانرات" },
+  { id: "community_posts", label: "منشورات المجتمع" },
+  { id: "chats", label: "المحادثات" },
+  { id: "support", label: "🆘 الدعم", special: true },
+  { id: "appeals", label: "⚖️ الطعون", special: true }
+];
+
+// ============================================================
+// UTIL
+// ============================================================
+const $ = (id) => document.getElementById(id);
+
+function toast(msg, type = "info") {
+  const t = document.createElement("div");
+  t.className = "toast " + type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function fmtDate(v) {
+  if (!v) return "—";
+  let d;
+  if (typeof v === "number") d = new Date(v);
+  else if (v.toDate) d = v.toDate();
+  else if (v.seconds) d = new Date(v.seconds * 1000);
+  else d = new Date(v);
+  if (isNaN(d)) return String(v);
+  return d.toLocaleString("ar-DZ", { dateStyle: "short", timeStyle: "short" });
+}
+
+// يحوّل أي timestamp (Firestore Timestamp / seconds / number / string) لـ ms
+function toMs(v) {
+  if (!v) return 0;
+  if (v.toDate) return v.toDate().getTime();
+  if (typeof v === "object" && v.seconds) return v.seconds * 1000;
+  if (typeof v === "number") return v;
+  const d = new Date(v);
+  return isNaN(d) ? 0 : d.getTime();
+}
+
+// آخر ظهور للمستخدم (للأونلاين الحقيقي بدل isOnline الثابت)
+function lastSeenMs(u) {
+  return toMs(u.lastSeen || u.lastActive || u.lastOnline || u.lastSeenAt || u.onlineAt);
+}
+
+// تاريخ التسجيل/الإنشاء (للترتيب حسب الأحدث)
+function rowDateMs(r) {
+  return toMs(r.createdAt || r.joinedAt || r.registeredAt || r.timestamp || r.updatedAt);
+}
+
+function isImageUrl(s) {
+  return typeof s === "string" && /^https?:\/\//.test(s) &&
+    (/\.(jpe?g|png|gif|webp|heic)/i.test(s) || s.includes("firebasestorage") || s.includes("googleusercontent"));
+}
+
+function detectType(v) {
+  if (v === null) return "null";
+  if (Array.isArray(v)) return "array";
+  if (v && typeof v === "object") {
+    if (v.toDate || v.seconds !== undefined && v.nanoseconds !== undefined) return "timestamp";
+    return "map";
+  }
+  return typeof v;
+}
+
+function renderValue(v) {
+  const t = detectType(v);
+  if (t === "null") return '<span style="color:var(--text-dim)">null</span>';
+  if (t === "boolean") return v
+    ? '<span class="pill green">true</span>'
+    : '<span class="pill red">false</span>';
+  if (t === "timestamp") return `<span class="pill blue">${fmtDate(v)}</span>`;
+  if (t === "array") {
+    if (v.length === 0) return '<span style="color:var(--text-dim)">[]</span>';
+    if (v.every(isImageUrl)) {
+      return `<div class="array-val">${v.map(u => `<img src="${u}" onclick="window.__viewImg('${u}')" loading="lazy">`).join("")}</div>`;
+    }
+    return `<pre>${escape(JSON.stringify(v, null, 2))}</pre>`;
+  }
+  if (t === "map") return `<pre>${escape(JSON.stringify(v, null, 2))}</pre>`;
+  if (t === "string" && isImageUrl(v)) {
+    return `<img src="${v}" onclick="window.__viewImg('${v}')" loading="lazy">`;
+  }
+  if (t === "number" && v > 1000000000000) return `<span class="pill blue">${fmtDate(v)}</span>`;
+  return escape(String(v));
+}
+
+function escape(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+window.__viewImg = (url) => {
+  const v = $("img-viewer");
+  v.innerHTML = `<img src="${url}">`;
+  v.hidden = false;
+};
+
+// ============================================================
+// DRAWER (mobile)
+// ============================================================
+function openDrawer() { $("app").classList.add("drawer-open"); }
+function closeDrawer() { $("app").classList.remove("drawer-open"); }
+$("hamburger").onclick = openDrawer;
+$("close-drawer").onclick = closeDrawer;
+$("drawer-backdrop").onclick = closeDrawer;
+
+// ============================================================
+// AUTH
+// ============================================================
+$("login-btn").onclick = async () => {
+  const email = $("login-email").value.trim();
+  const pass = $("login-pass").value;
+  const err = $("login-error");
+  err.textContent = "";
+  if (email !== ADMIN_EMAIL) {
+    err.textContent = "هاد الحساب ماشي admin.";
+    return;
+  }
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch (e) {
+    err.textContent = "Email أو password خاطئ.";
+  }
+};
+
+$("login-pass").addEventListener("keydown", e => {
+  if (e.key === "Enter") $("login-btn").click();
+});
+
+$("logout-btn").onclick = () => signOut(auth);
+
+onAuthStateChanged(auth, (user) => {
+  if (user && user.email === ADMIN_EMAIL) {
+    $("login-screen").hidden = true;
+    $("app").hidden = false;
+    $("who").textContent = user.email;
+    initApp();
+  } else {
+    $("login-screen").hidden = false;
+    $("app").hidden = true;
+    if (user) {
+      signOut(auth);
+      $("login-error").textContent = "هاد الحساب ماشي admin.";
+    }
+  }
+});
+
+// ============================================================
+// APP INIT
+// ============================================================
+let currentPage = "dashboard";
+
+function initApp() {
+  const nav = $("nav");
+  nav.innerHTML = "";
+  COLLECTIONS.forEach(c => {
+    const b = document.createElement("button");
+    b.dataset.page = c.id;
+    b.innerHTML = `<span>${c.label}</span><span class="badge" id="badge-${c.id}"></span>`;
+    b.onclick = () => navigateTo(c.id);
+    nav.appendChild(b);
+  });
+  navigateTo("dashboard");
+}
+
+function navigateTo(pageId) {
+  currentPage = pageId;
+  closeDrawer();
+  document.querySelectorAll("#nav button").forEach(b => {
+    b.classList.toggle("active", b.dataset.page === pageId);
+  });
+  if (pageId === "dashboard") renderDashboard();
+  else if (pageId === "recharge_codes") renderRechargeCodes();
+  else if (pageId === "pre_registrations") renderPreRegistrations();
+  else if (pageId === "support") renderSupport();
+  else if (pageId === "appeals") { if (window.renderAppeals) window.renderAppeals(); else $("page").innerHTML = '<div class="empty-state">ملف appeals.js غير محمّل</div>'; }
+  else if (pageId === "unverified") renderUnverified();
+  else renderCollection(pageId);
+}
+
+// ============================================================
+// UNVERIFIED WORKERS
+// ============================================================
+async function renderUnverified() {
+  const page = $("page");
+  page.innerHTML = `
+    <div class="page-header">
+      <h2>⏳ غير موثّقين</h2>
+      <div class="tools">
+        <input type="text" id="search" placeholder="بحث بالاسم…" style="width:240px">
+        <button class="ghost" id="refresh">🔄</button>
+      </div>
+    </div>
+    <div id="table-area" class="loading"><div class="spinner"></div></div>
+  `;
+
+  let allRows = [];
+
+  async function load() {
+    const area = $("table-area");
+    area.className = "loading";
+    area.innerHTML = '<div class="spinner"></div>';
+    try {
+      const snap = await getDocs(collection(db, "users"));
+      const workers = [];
+      snap.forEach(d => {
+        const u = { id: d.id, ...d.data() };
+        const isWorker = u.category || u.domain;
+        if (isWorker && u.isVerified !== true) workers.push(u);
+      });
+      // جيب البيانات الحساسة (بطاقة التعريف + الهاتف) من private/data
+      await Promise.all(workers.map(async (w) => {
+        try {
+          const priv = await getDoc(doc(db, "users", w.id, "private", "data"));
+          if (priv.exists()) {
+            const pd = priv.data();
+            if (!w.idCardUrl && pd.idCardUrl) w.idCardUrl = pd.idCardUrl;
+            if (!w.phone && pd.phone) w.phone = pd.phone;
+          }
+        } catch (e) { /* تجاهل */ }
+      }));
+      allRows = workers;
+      render(allRows);
+    } catch (e) {
+      area.className = "";
+      area.innerHTML = `<div class="empty-state">خطأ: ${escape(e.message)}</div>`;
+    }
+  }
+
+  function render(rows) {
+    const area = $("table-area");
+    if (rows.length === 0) {
+      area.className = "";
+      area.innerHTML = '<div class="empty-state">ما كاينش حرفيين غير موثّقين 🎉</div>';
+      return;
+    }
+    area.className = "table-wrap auto-cards";
+    const tableBody = rows.map(r => `
+      <tr>
+        <td>${r.profilePicUrl ? `<img src="${r.profilePicUrl}" style="width:40px;height:40px;border-radius:50%;object-fit:cover" onclick="window.__viewImg('${r.profilePicUrl}')">` : '—'}</td>
+        <td style="font-weight:600">${escape(r.name || '—')}</td>
+        <td>${escape(r.category || r.domain || '—')}</td>
+        <td>${escape(r.city || '—')}</td>
+        <td>${escape(r.phone || '—')}</td>
+        <td>${r.idCardUrl ? `<img src="${r.idCardUrl}" style="max-width:60px;max-height:40px;border-radius:4px" onclick="window.__viewImg('${r.idCardUrl}')">` : '<span class="pill gray">لا بطاقة</span>'}</td>
+        <td class="actions">
+          <button class="ghost" onclick="window.__view('users','${r.id}')">عرض</button>
+          <button class="success" onclick="window.__verifyUnv('${r.id}')">توثيق ✓</button>
+        </td>
+      </tr>
+    `).join("");
+
+    const cards = rows.map(r => `
+      <div class="data-card">
+        <div class="dc-head">
+          <div style="display:flex;align-items:center;gap:10px">
+            ${r.profilePicUrl ? `<img src="${r.profilePicUrl}" style="width:44px;height:44px;border-radius:50%;object-fit:cover" onclick="window.__viewImg('${r.profilePicUrl}')">` : ''}
+            <strong>${escape(r.name || '—')}</strong>
+          </div>
+        </div>
+        <div class="dc-row"><span class="dc-key">التخصص</span><span class="dc-val">${escape(r.category || r.domain || '—')}</span></div>
+        <div class="dc-row"><span class="dc-key">المدينة</span><span class="dc-val">${escape(r.city || '—')}</span></div>
+        <div class="dc-row"><span class="dc-key">الهاتف</span><span class="dc-val">${escape(r.phone || '—')}</span></div>
+        <div class="dc-row"><span class="dc-key">البطاقة</span><span class="dc-val">${r.idCardUrl ? `<img src="${r.idCardUrl}" style="max-width:80px;max-height:50px;border-radius:4px" onclick="window.__viewImg('${r.idCardUrl}')">` : 'لا بطاقة'}</span></div>
+        <div class="dc-actions">
+          <button class="ghost" onclick="window.__view('users','${r.id}')">عرض</button>
+          <button class="success" onclick="window.__verifyUnv('${r.id}')">توثيق ✓</button>
+        </div>
+      </div>
+    `).join("");
+
+    area.innerHTML = `
+      <div class="table-scroll"><table>
+        <thead><tr><th>الصورة</th><th>الاسم</th><th>التخصص</th><th>المدينة</th><th>الهاتف</th><th>البطاقة</th><th>أوامر</th></tr></thead>
+        <tbody>${tableBody}</tbody>
+      </table></div>
+      <div class="cards-list active">${cards}</div>
+    `;
+  }
+
+  $("refresh").onclick = load;
+  $("search").oninput = () => {
+    const q = $("search").value.toLowerCase().trim();
+    render(q ? allRows.filter(r => (r.name||"").toLowerCase().includes(q)) : allRows);
+  };
+
+  window.__view = (c, id) => openViewModal(c, id);
+  window.__verifyUnv = async (id) => {
+    try {
+      await updateDoc(doc(db, "users", id), { isVerified: true });
+      toast("اتوثّق ✓", "success");
+      load();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+
+  load();
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+async function renderDashboard() {
+  const page = $("page");
+  page.innerHTML = `
+    <div class="page-header"><h2>📊 لوحة القيادة</h2></div>
+    <div class="stats-grid" id="stats"><div class="loading"><div class="spinner"></div></div></div>
+    <div class="page-header"><h2 style="font-size:18px">آخر الطلبات</h2></div>
+    <div id="recent-requests" class="loading"><div class="spinner"></div></div>
+  `;
+
+  const stats = $("stats");
+  stats.innerHTML = "";
+
+  try {
+    const [usersSnap, requestsSnap, revealsSnap, postOffersSnap, reviewsSnap] = await Promise.all([
+      getDocs(collection(db, "users")),
+      getDocs(collection(db, "requests")),
+      getDocs(collection(db, "phone_reveals")),
+      getDocs(collection(db, "post_offers")),
+      getDocs(collection(db, "reviews"))
+    ]);
+
+    // أونلاين = نشط فآخر 5 دقايق (بدل isOnline لي يبقى true ديما)
+    const ONLINE_WINDOW_MS = 5 * 60 * 1000;
+    const nowMs = Date.now();
+    let workers = 0, clients = 0, verified = 0;
+    let onlineWorkers = 0, onlineClients = 0, hasPresence = false;
+    usersSnap.forEach(d => {
+      const u = d.data();
+      const isW = !!(u.category || u.domain);
+      if (isW) workers++; else clients++;
+      if (u.isVerified) verified++;
+      const ls = lastSeenMs(u);
+      if (ls > 0) hasPresence = true;
+      const onlineNow = ls > 0 && (nowMs - ls) <= ONLINE_WINDOW_MS;
+      if (onlineNow) { if (isW) onlineWorkers++; else onlineClients++; }
+    });
+    const online = onlineWorkers + onlineClients;
+
+    const startToday = new Date(); startToday.setHours(0,0,0,0);
+    let revealsToday = 0;
+    revealsSnap.forEach(d => {
+      const r = d.data();
+      const ts = r.timestamp || r.createdAt || r.at;
+      let date;
+      if (ts?.toDate) date = ts.toDate();
+      else if (typeof ts === "number") date = new Date(ts);
+      if (date && date >= startToday) revealsToday++;
+    });
+
+    const cards = [
+      { label: "إجمالي المستخدمين", value: usersSnap.size },
+      { label: "حرفيين", value: workers, sub: `${verified} موثّق` },
+      { label: "زبائن", value: clients },
+      { label: "أونلاين دروك", value: online, accent: true, sub: hasPresence ? `${onlineWorkers} حرفي · ${onlineClients} زبون` : "⚠ ماكاش حقل lastSeen" },
+      { label: "حرفيين أونلاين", value: onlineWorkers, accent: true },
+      { label: "زبائن أونلاين", value: onlineClients, accent: true },
+      { label: "إجمالي الطلبات", value: requestsSnap.size },
+      { label: "كشف الهاتف اليوم", value: revealsToday, accent: true },
+      { label: "كشف الهاتف (الكل)", value: revealsSnap.size },
+      { label: "العروض", value: postOffersSnap.size },
+      { label: "التقييمات", value: reviewsSnap.size }
+    ];
+
+    stats.innerHTML = cards.map(c => `
+      <div class="stat-card">
+        <div class="label">${c.label}</div>
+        <div class="value ${c.accent?'accent':''}">${c.value}</div>
+        ${c.sub ? `<div class="sub">${c.sub}</div>` : ""}
+      </div>
+    `).join("");
+
+    const recentEl = $("recent-requests");
+    const reqs = [];
+    requestsSnap.forEach(d => reqs.push({ id: d.id, ...d.data() }));
+    reqs.sort((a,b) => {
+      const ta = a.createdAt?.seconds || a.timestamp?.seconds || 0;
+      const tb = b.createdAt?.seconds || b.timestamp?.seconds || 0;
+      return tb - ta;
+    });
+    const top = reqs.slice(0, 8);
+    if (top.length === 0) {
+      recentEl.className = "";
+      recentEl.innerHTML = '<div class="empty-state">ما كاينش طلبات</div>';
+    } else {
+      recentEl.className = "table-wrap";
+      recentEl.innerHTML = `<div class="table-scroll"><table>
+        <thead><tr><th>ID</th><th>الحالة</th><th>الفئة</th><th>التاريخ</th></tr></thead>
+        <tbody>${top.map(r => `<tr>
+          <td class="id-cell">${escape(r.id)}</td>
+          <td><span class="pill ${r.status==='accepted'?'green':r.status==='pending'?'amber':'gray'}">${escape(r.status||'—')}</span></td>
+          <td>${escape(r.category || r.domain || '—')}</td>
+          <td>${fmtDate(r.createdAt || r.timestamp)}</td>
+        </tr>`).join("")}</tbody>
+      </table></div>`;
+    }
+  } catch (e) {
+    console.error(e);
+    stats.innerHTML = `<div class="empty-state">خطأ: ${e.message}</div>`;
+  }
+}
+
+// ============================================================
+// GENERIC COLLECTION VIEW
+// ============================================================
+async function renderCollection(colId) {
+  const cfg = COLLECTIONS.find(c => c.id === colId);
+  const page = $("page");
+  page.innerHTML = `
+    <div class="page-header">
+      <h2>${cfg.label}</h2>
+      <div class="tools">
+        <input type="text" id="search" placeholder="بحث…" style="width:240px">
+        <select id="limit-sel">
+          <option value="50">50</option>
+          <option value="100">100</option>
+          <option value="200">200</option>
+          <option value="500">500</option>
+        </select>
+        <button class="ghost" id="sort-newest">🆕 الأحدث</button>
+        <button class="ghost" id="refresh">🔄</button>
+        <button class="primary" id="add-new">+ جديد</button>
+      </div>
+    </div>
+    ${colId === "users" ? `<div class="tools" id="type-filter" style="margin-bottom:16px;gap:8px">
+        <button class="ghost active" data-uf="all">الكل</button>
+        <button class="ghost" data-uf="worker">👷 حرفيين</button>
+        <button class="ghost" data-uf="client">🧑 زبائن</button>
+      </div>` : ""}
+    <div id="table-area" class="loading"><div class="spinner"></div></div>
+  `;
+
+  let allRows = [];
+  let viewFilter = "all";
+  let searchQ = "";
+  let sortNewest = (colId === "users"); // المستخدمين يبانو الأحدث أوّل تلقائيا
+
+  $("refresh").onclick = () => loadCol();
+  $("limit-sel").onchange = () => loadCol();
+  $("search").oninput = () => { searchQ = $("search").value; applyView(); };
+  $("add-new").onclick = () => openEditModal(colId, null, {});
+
+  const sortBtn = $("sort-newest");
+  if (sortNewest) sortBtn.classList.add("active");
+  sortBtn.onclick = () => { sortNewest = !sortNewest; sortBtn.classList.toggle("active", sortNewest); applyView(); };
+
+  if (colId === "users") {
+    document.querySelectorAll("#type-filter button").forEach(b => {
+      b.onclick = () => {
+        viewFilter = b.dataset.uf;
+        document.querySelectorAll("#type-filter button").forEach(x => x.classList.toggle("active", x === b));
+        applyView();
+      };
+    });
+  }
+
+  function applyView() {
+    let rows = allRows.slice();
+    if (colId === "users" && viewFilter !== "all") {
+      rows = rows.filter(r => {
+        const isW = !!(r.category || r.domain);
+        return viewFilter === "worker" ? isW : !isW;
+      });
+    }
+    const q = searchQ.toLowerCase().trim();
+    if (q) rows = rows.filter(r => JSON.stringify(r).toLowerCase().includes(q));
+    if (sortNewest) rows.sort((a, b) => rowDateMs(b) - rowDateMs(a));
+    renderRows(rows);
+  }
+
+  async function loadCol() {
+    const area = $("table-area");
+    area.className = "loading";
+    area.innerHTML = '<div class="spinner"></div>';
+    try {
+      const lim = parseInt($("limit-sel").value, 10);
+      const snap = await getDocs(query(collection(db, colId), limit(lim)));
+      allRows = [];
+      snap.forEach(d => allRows.push({ id: d.id, ...d.data() }));
+      applyView();
+    } catch (e) {
+      console.error(e);
+      area.className = "";
+      area.innerHTML = `<div class="empty-state">خطأ: ${escape(e.message)}</div>`;
+    }
+  }
+
+  function filterRows(q) {
+    q = q.toLowerCase().trim();
+    if (!q) return renderRows(allRows);
+    renderRows(allRows.filter(r => JSON.stringify(r).toLowerCase().includes(q)));
+  }
+
+  function renderRows(rows) {
+    const area = $("table-area");
+    if (rows.length === 0) {
+      area.className = "";
+      area.innerHTML = '<div class="empty-state">ما كاينش بيانات</div>';
+      return;
+    }
+    area.className = "table-wrap auto-cards";
+    const keys = pickKeyFields(colId, rows);
+
+    const header = `<tr><th>ID</th>${keys.map(k => `<th>${escape(k)}</th>`).join("")}<th>أوامر</th></tr>`;
+    const tableBody = rows.map(r => `<tr>
+        <td class="id-cell" title="${escape(r.id)}">${escape(r.id.slice(0,12))}…</td>
+        ${keys.map(k => `<td>${renderCell(r[k], k, r, colId)}</td>`).join("")}
+        <td class="actions">
+          <button class="ghost" onclick="window.__view('${colId}','${r.id}')">عرض</button>
+          <button class="ghost" onclick="window.__edit('${colId}','${r.id}')">تعديل</button>
+          ${specialActions(colId, r)}
+          <button class="danger" onclick="window.__del('${colId}','${r.id}')">حذف</button>
+        </td>
+      </tr>`).join("");
+
+    const cards = rows.map(r => `
+      <div class="data-card">
+        <div class="dc-head">
+          <span class="dc-id">${escape(r.id)}</span>
+        </div>
+        ${keys.map(k => `<div class="dc-row"><span class="dc-key">${escape(k)}</span><span class="dc-val">${renderCell(r[k], k, r, colId)}</span></div>`).join("")}
+        <div class="dc-actions">
+          <button class="ghost" onclick="window.__view('${colId}','${r.id}')">عرض</button>
+          <button class="ghost" onclick="window.__edit('${colId}','${r.id}')">تعديل</button>
+          ${specialActions(colId, r)}
+          <button class="danger" onclick="window.__del('${colId}','${r.id}')">حذف</button>
+        </div>
+      </div>
+    `).join("");
+
+    area.innerHTML = `
+      <div class="table-scroll"><table><thead>${header}</thead><tbody>${tableBody}</tbody></table></div>
+      <div class="cards-list active">${cards}</div>
+    `;
+  }
+
+  window.__view = (c, id) => openViewModal(c, id);
+  window.__edit = (c, id) => openEditModal(c, id);
+  window.__del = async (c, id) => {
+    if (!confirm(`متأكد من حذف ${id}؟`)) return;
+    try {
+      await deleteDoc(doc(db, c, id));
+      toast("اتحذف", "success");
+      loadCol();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+  window.__verify = async (id, val) => {
+    try {
+      await updateDoc(doc(db, "users", id), { isVerified: val });
+      toast(val ? "اتوثّق" : "اترفع التوثيق", "success");
+      loadCol();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+  window.__block = async (id, val) => {
+    if (val && !confirm("متأكد باش تبلوكي هاد الحساب؟")) return;
+    try {
+      await updateDoc(doc(db, "users", id), { isBlocked: val });
+      toast(val ? "اتبلوكا 🚫" : "اتفكّ البلوك", "success");
+      loadCol();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+
+  loadCol();
+}
+
+function pickKeyFields(colId, rows) {
+  const presets = {
+    users: ["name", "phone", "category", "city", "isVerified", "isBlocked", "createdAt"],
+    requests: ["status", "category", "clientId", "workerId", "createdAt"],
+    post_offers: ["workerId", "requestId", "price", "status"],
+    phone_reveals: ["clientId", "workerId", "timestamp", "cost"],
+    reviews: ["workerId", "clientId", "rating", "comment"],
+    recharge_codes: ["value", "used", "usedBy", "usedAt"],
+    banners: ["title", "imageUrl", "isActive", "order"],
+    community_posts: ["authorId", "text", "createdAt"],
+    chats: ["participants", "lastMessage", "updatedAt"]
+  };
+  if (presets[colId]) return presets[colId];
+  const r = rows[0] || {};
+  return Object.keys(r).filter(k => k !== "id").slice(0, 5);
+}
+
+function renderCell(v, key, row, colId) {
+  if (v === undefined || v === null) return '<span style="color:var(--text-dim)">—</span>';
+  if (key === "isBlocked") return v ? '<span class="pill red">🚫 محظور</span>' : '<span class="pill green">✓</span>';
+  if (typeof v === "boolean") return v ? '<span class="pill green">✓</span>' : '<span class="pill red">✗</span>';
+  if (key === "isVerified" || key === "isOnline" || key === "isUsed" || key === "used" || key === "isActive" || key === "isProfileComplete") {
+    return v ? '<span class="pill green">✓</span>' : '<span class="pill red">✗</span>';
+  }
+  if (key === "status") {
+    const cls = v === "accepted" || v === "completed" ? "green" :
+                v === "pending" ? "amber" :
+                v === "rejected" || v === "cancelled" ? "red" : "gray";
+    return `<span class="pill ${cls}">${escape(String(v))}</span>`;
+  }
+  if (key.toLowerCase().includes("at") || key.toLowerCase().includes("time") || key === "createdAt" || key === "updatedAt" || key === "timestamp") {
+    return fmtDate(v);
+  }
+  if (Array.isArray(v)) return `<span style="color:var(--text-dim)">[${v.length}]</span>`;
+  if (typeof v === "object") return `<span style="color:var(--text-dim)">{…}</span>`;
+  if (typeof v === "string" && isImageUrl(v)) {
+    return `<img src="${v}" style="max-width:40px;max-height:40px;border-radius:4px" onclick="window.__viewImg('${v}')">`;
+  }
+  const s = String(v);
+  return escape(s.length > 60 ? s.slice(0, 60) + "…" : s);
+}
+
+function specialActions(colId, row) {
+  if (colId === "users") {
+    const verifyBtn = row.isVerified
+      ? `<button class="ghost" onclick="window.__verify('${row.id}', false)">رفع التوثيق</button>`
+      : `<button class="success" onclick="window.__verify('${row.id}', true)">توثيق ✓</button>`;
+    const blockBtn = row.isBlocked
+      ? `<button class="success" onclick="window.__block('${row.id}', false)">فك البلوك</button>`
+      : `<button class="danger" onclick="window.__block('${row.id}', true)">🚫 بلوك</button>`;
+    return verifyBtn + blockBtn;
+  }
+  return "";
+}
+
+// ============================================================
+// VIEW MODAL
+// ============================================================
+async function openViewModal(colId, docId) {
+  const m = $("modal");
+  const ov = $("modal-overlay");
+  m.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  ov.hidden = false;
+  try {
+    const snap = await getDoc(doc(db, colId, docId));
+    if (!snap.exists()) {
+      m.innerHTML = `<h3>ما لقيتش</h3><div class="modal-actions"><button class="ghost" onclick="document.getElementById('modal-overlay').hidden=true">إغلاق</button></div>`;
+      return;
+    }
+    const data = snap.data();
+    let rows = Object.keys(data).sort().map(k => `
+      <div class="field-row">
+        <div class="field-key">${escape(k)}</div>
+        <div class="field-val">${renderValue(data[k])}</div>
+      </div>
+    `).join("");
+
+    // للمستخدمين: جيب البيانات الحساسة من private/data
+    if (colId === "users") {
+      try {
+        const priv = await getDoc(doc(db, "users", docId, "private", "data"));
+        if (priv.exists()) {
+          const pd = priv.data();
+          const privRows = Object.keys(pd).sort().map(k => `
+            <div class="field-row">
+              <div class="field-key">🔒 ${escape(k)}</div>
+              <div class="field-val">${renderValue(pd[k])}</div>
+            </div>
+          `).join("");
+          rows += `<div style="margin-top:16px;padding-top:12px;border-top:2px solid var(--accent)">
+            <div style="color:var(--accent);font-size:12px;font-weight:600;margin-bottom:8px">🔒 بيانات حساسة (private/data)</div>
+            ${privRows}
+          </div>`;
+        }
+      } catch (e) { /* تجاهل */ }
+    }
+    m.innerHTML = `
+      <h3>${escape(colId)} / ${escape(docId)}</h3>
+      <div>${rows}</div>
+      <div class="modal-actions">
+        <button class="primary" onclick="document.getElementById('modal-overlay').hidden=true; window.__edit('${colId}','${docId}')">تعديل</button>
+        <button class="ghost" onclick="document.getElementById('modal-overlay').hidden=true">إغلاق</button>
+      </div>
+    `;
+  } catch (e) {
+    m.innerHTML = `<h3>خطأ</h3><p>${escape(e.message)}</p>`;
+  }
+}
+
+// ============================================================
+// EDIT MODAL
+// ============================================================
+async function openEditModal(colId, docId, presetData = null) {
+  const m = $("modal");
+  const ov = $("modal-overlay");
+  m.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  ov.hidden = false;
+
+  let data = presetData;
+  let isNew = !docId;
+  try {
+    if (docId && data === null) {
+      const snap = await getDoc(doc(db, colId, docId));
+      if (!snap.exists()) { m.innerHTML = `<h3>ما لقيتش</h3>`; return; }
+      data = snap.data();
+    }
+    if (isNew && Object.keys(data).length === 0) {
+      const sample = await getDocs(query(collection(db, colId), limit(1)));
+      sample.forEach(d => {
+        const sd = d.data();
+        Object.keys(sd).forEach(k => {
+          const v = sd[k];
+          data[k] = typeof v === "boolean" ? false :
+                   typeof v === "number" ? 0 :
+                   Array.isArray(v) ? [] :
+                   typeof v === "object" && v !== null ? {} : "";
+        });
+      });
+    }
+
+    const fields = Object.keys(data).sort().map(k => fieldEditor(k, data[k])).join("");
+    m.innerHTML = `
+      <h3>${isNew ? "إضافة جديد" : "تعديل"} — ${escape(colId)}${docId ? " / " + escape(docId) : ""}</h3>
+      <div id="edit-fields">${fields}</div>
+      <div style="margin-top:14px"><button class="ghost" id="add-field-btn">+ زيد حقل</button></div>
+      <div class="modal-actions">
+        <button class="primary" id="save-btn">حفظ</button>
+        <button class="ghost" onclick="document.getElementById('modal-overlay').hidden=true">إلغاء</button>
+      </div>
+    `;
+
+    $("add-field-btn").onclick = () => {
+      const key = prompt("اسم الحقل:");
+      if (!key) return;
+      const div = document.createElement("div");
+      div.innerHTML = fieldEditor(key, "");
+      $("edit-fields").appendChild(div.firstElementChild);
+    };
+
+    $("save-btn").onclick = async () => {
+      const updated = collectFields();
+      try {
+        if (isNew) {
+          if (docId) await setDoc(doc(db, colId, docId), updated);
+          else await addDoc(collection(db, colId), updated);
+          toast("اتزاد", "success");
+        } else {
+          await updateDoc(doc(db, colId, docId), updated);
+          toast("اتحفظ", "success");
+        }
+        ov.hidden = true;
+        navigateTo(colId);
+      } catch (e) {
+        toast("خطأ: " + e.message, "error");
+      }
+    };
+  } catch (e) {
+    m.innerHTML = `<h3>خطأ</h3><p>${escape(e.message)}</p>`;
+  }
+}
+
+function fieldEditor(key, value) {
+  const type = detectType(value);
+  let input = "";
+  if (type === "boolean") {
+    input = `<select data-key="${escape(key)}" data-type="boolean">
+      <option value="true" ${value?'selected':''}>true</option>
+      <option value="false" ${!value?'selected':''}>false</option>
+    </select>`;
+  } else if (type === "number") {
+    input = `<input type="number" step="any" data-key="${escape(key)}" data-type="number" value="${value}">`;
+  } else if (type === "array" || type === "map" || type === "timestamp") {
+    const txt = type === "timestamp" ? JSON.stringify(value.toDate ? value.toDate().toISOString() : value) : JSON.stringify(value, null, 2);
+    input = `<textarea data-key="${escape(key)}" data-type="${type}">${escape(txt)}</textarea>`;
+  } else if (type === "null") {
+    input = `<input type="text" data-key="${escape(key)}" data-type="null" value="">`;
+  } else {
+    input = `<input type="text" data-key="${escape(key)}" data-type="string" value="${escape(String(value))}">`;
+  }
+  return `<div class="edit-field"><label><span class="type-hint">${type}</span>${escape(key)}</label>${input}</div>`;
+}
+
+function collectFields() {
+  const result = {};
+  document.querySelectorAll("#edit-fields [data-key]").forEach(el => {
+    const k = el.dataset.key;
+    const t = el.dataset.type;
+    const raw = el.value;
+    if (t === "boolean") result[k] = raw === "true";
+    else if (t === "number") result[k] = raw === "" ? null : Number(raw);
+    else if (t === "array" || t === "map") {
+      try { result[k] = JSON.parse(raw); } catch { result[k] = raw; }
+    } else if (t === "timestamp") {
+      try {
+        const parsed = JSON.parse(raw);
+        const d = new Date(parsed);
+        result[k] = isNaN(d) ? raw : Timestamp.fromDate(d);
+      } catch { result[k] = raw; }
+    } else if (t === "null") {
+      result[k] = raw === "" ? null : raw;
+    } else {
+      result[k] = raw;
+    }
+  });
+  return result;
+}
+
+// ============================================================
+// RECHARGE CODES
+// ============================================================
+async function renderRechargeCodes() {
+  const page = $("page");
+  page.innerHTML = `
+    <div class="page-header"><h2>كودات الشحن</h2></div>
+    <div class="gen-box">
+      <h3 style="margin-bottom:14px;color:var(--accent);font-size:15px">توليد كودات جديدة</h3>
+      <div class="gen-row">
+        <div><label>العدد</label><input type="number" id="gen-count" value="10" min="1" max="500"></div>
+        <div><label>القيمة (value)</label><input type="number" id="gen-amount" value="1000" min="1"></div>
+        <div><label>طول الكود</label><input type="number" id="gen-length" value="25" min="6" max="32"></div>
+        <div><label>Prefix (اختياري)</label><input type="text" id="gen-prefix" placeholder="مثلا HRF" maxlength="5"></div>
+        <div style="flex:0"><button class="primary" id="gen-btn">توليد</button></div>
+      </div>
+      <div id="gen-result" style="margin-top:12px;font-size:12px;color:var(--text-dim)"></div>
+    </div>
+    <div class="page-header">
+      <h2 style="font-size:16px">الكودات الموجودة</h2>
+      <div class="tools">
+        <input type="text" id="search" placeholder="بحث…" style="width:200px">
+        <button class="ghost" id="refresh">🔄</button>
+      </div>
+    </div>
+    <div id="table-area" class="loading"><div class="spinner"></div></div>
+  `;
+
+  $("gen-btn").onclick = generateCodes;
+  $("refresh").onclick = loadCodes;
+  $("search").oninput = () => filterCodes($("search").value);
+
+  let allCodes = [];
+
+  async function loadCodes() {
+    const area = $("table-area");
+    area.className = "loading";
+    area.innerHTML = '<div class="spinner"></div>';
+    try {
+      const snap = await getDocs(query(collection(db, "recharge_codes"), limit(500)));
+      allCodes = [];
+      snap.forEach(d => allCodes.push({ id: d.id, ...d.data() }));
+      renderCodes(allCodes);
+    } catch (e) {
+      area.className = "";
+      area.innerHTML = `<div class="empty-state">خطأ: ${escape(e.message)}</div>`;
+    }
+  }
+
+  function filterCodes(q) {
+    q = q.toLowerCase().trim();
+    if (!q) return renderCodes(allCodes);
+    renderCodes(allCodes.filter(c => JSON.stringify(c).toLowerCase().includes(q)));
+  }
+
+  function renderCodes(rows) {
+    const area = $("table-area");
+    if (rows.length === 0) {
+      area.className = "";
+      area.innerHTML = '<div class="empty-state">ما كاينش كودات</div>';
+      return;
+    }
+    area.className = "table-wrap auto-cards";
+    const tableBody = rows.map(r => `
+      <tr>
+        <td style="font-family:ui-monospace,monospace;font-weight:600">${escape(r.id)}</td>
+        <td><span class="pill amber">${r.value || 0}</span></td>
+        <td>${r.used ? '<span class="pill red">مستعمل</span>' : '<span class="pill green">صالح</span>'}</td>
+        <td class="id-cell">${r.usedBy ? escape(r.usedBy) : '—'}</td>
+        <td>${fmtDate(r.usedAt)}</td>
+        <td class="actions">
+          <button class="ghost" onclick="navigator.clipboard.writeText('${r.id}'); window.__toast('تنسخ')">📋</button>
+          <button class="danger" onclick="window.__delCode('${r.id}')">حذف</button>
+        </td>
+      </tr>
+    `).join("");
+
+    const cards = rows.map(r => `
+      <div class="data-card">
+        <div class="dc-head">
+          <span class="dc-id" style="font-weight:600;color:var(--text)">${escape(r.id)}</span>
+          ${r.used ? '<span class="pill red">مستعمل</span>' : '<span class="pill green">صالح</span>'}
+        </div>
+        <div class="dc-row"><span class="dc-key">القيمة</span><span class="dc-val"><span class="pill amber">${r.value || 0}</span></span></div>
+        <div class="dc-row"><span class="dc-key">مستعمل من</span><span class="dc-val">${r.usedBy ? escape(r.usedBy) : '—'}</span></div>
+        <div class="dc-row"><span class="dc-key">تاريخ الاستعمال</span><span class="dc-val">${fmtDate(r.usedAt)}</span></div>
+        <div class="dc-actions">
+          <button class="ghost" onclick="navigator.clipboard.writeText('${r.id}'); window.__toast('تنسخ')">📋 نسخ</button>
+          <button class="danger" onclick="window.__delCode('${r.id}')">حذف</button>
+        </div>
+      </div>
+    `).join("");
+
+    area.innerHTML = `
+      <div class="table-scroll"><table>
+        <thead><tr><th>الكود</th><th>القيمة</th><th>الحالة</th><th>مستعمل من</th><th>تاريخ الاستعمال</th><th>أوامر</th></tr></thead>
+        <tbody>${tableBody}</tbody>
+      </table></div>
+      <div class="cards-list active">${cards}</div>
+    `;
+  }
+
+  window.__toast = (s) => toast(s, "success");
+  window.__delCode = async (id) => {
+    if (!confirm("حذف هاد الكود؟")) return;
+    try {
+      await deleteDoc(doc(db, "recharge_codes", id));
+      toast("اتحذف", "success");
+      loadCodes();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+
+  async function generateCodes() {
+    const count = parseInt($("gen-count").value, 10);
+    const amount = parseInt($("gen-amount").value, 10);
+    const length = parseInt($("gen-length").value, 10);
+    const prefix = ($("gen-prefix").value || "").trim().toUpperCase();
+    const res = $("gen-result");
+    res.textContent = `جاري إنشاء ${count} كود…`;
+    const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const generated = [];
+    try {
+      for (let i = 0; i < count; i++) {
+        let body = "";
+        for (let j = 0; j < length; j++) {
+          body += charset.charAt(Math.floor(Math.random() * charset.length));
+        }
+        const code = prefix ? `${prefix}-${body}` : body;
+        await setDoc(doc(db, "recharge_codes", code), { used: false, value: amount });
+        generated.push(code);
+        res.textContent = `${i+1}/${count}…`;
+      }
+      res.innerHTML = `✅ تم إنشاء ${count} كود.<br><textarea readonly style="width:100%;min-height:100px;margin-top:8px;font-family:ui-monospace,monospace">${generated.join("\n")}</textarea>`;
+      toast(`${count} كود اتزادو`, "success");
+      loadCodes();
+    } catch (e) {
+      res.textContent = "خطأ: " + e.message;
+      toast("خطأ: " + e.message, "error");
+    }
+  }
+
+  loadCodes();
+}
+
+// ============================================================
+// PRE-REGISTRATIONS (قبول حسابات pre-register)
+// ============================================================
+async function renderPreRegistrations() {
+  const page = $("page");
+  page.innerHTML = `
+    <div class="page-header">
+      <h2>📝 تسجيل مسبق</h2>
+      <div class="tools">
+        <input type="text" id="search" placeholder="بحث بالاسم/الهاتف…" style="width:220px">
+        <button class="ghost" id="refresh">🔄</button>
+      </div>
+    </div>
+    <div class="tools" style="margin-bottom:16px;gap:8px;display:flex;flex-wrap:wrap">
+      <button class="ghost active" data-f="pending">⏳ في الانتظار</button>
+      <button class="ghost" data-f="approved">✓ مقبولين</button>
+      <button class="ghost" data-f="rejected">✗ مرفوضين</button>
+      <button class="ghost" data-f="all">الكل</button>
+    </div>
+    <div id="table-area" class="loading"><div class="spinner"></div></div>
+  `;
+
+  let allRows = [];
+  let viewFilter = "pending";
+  let searchQ = "";
+
+  function prStatus(r) {
+    if (r.approved === true || r.status === "approved") return "approved";
+    if (r.approved === false || r.status === "rejected") return "rejected";
+    return "pending";
+  }
+
+  async function load() {
+    const area = $("table-area");
+    area.className = "loading";
+    area.innerHTML = '<div class="spinner"></div>';
+    try {
+      const snap = await getDocs(query(collection(db, "pre_registrations"), limit(500)));
+      allRows = [];
+      snap.forEach(d => allRows.push({ id: d.id, ...d.data() }));
+      apply();
+    } catch (e) {
+      area.className = "";
+      area.innerHTML = `<div class="empty-state">خطأ: ${escape(e.message)}</div>`;
+    }
+  }
+
+  function apply() {
+    let rows = allRows.slice();
+    if (viewFilter !== "all") rows = rows.filter(r => prStatus(r) === viewFilter);
+    if (searchQ) {
+      const q = searchQ.toLowerCase();
+      rows = rows.filter(r => JSON.stringify(r).toLowerCase().includes(q));
+    }
+    rows.sort((a, b) => rowDateMs(b) - rowDateMs(a));
+    render(rows);
+  }
+
+  function statusPill(st) {
+    if (st === "approved") return '<span class="pill green">✓ مقبول</span>';
+    if (st === "rejected") return '<span class="pill red">✗ مرفوض</span>';
+    return '<span class="pill amber">⏳ في الانتظار</span>';
+  }
+
+  function render(rows) {
+    const area = $("table-area");
+    if (rows.length === 0) {
+      area.className = "";
+      area.innerHTML = '<div class="empty-state">ما كاينش تسجيلات هنا</div>';
+      return;
+    }
+    area.className = "table-wrap auto-cards";
+    const pic = r => (r.profilePicUrl || r.profilePic || r.photoUrl);
+    const cat = r => (r.category || r.domain || '—');
+    const city = r => (r.city || r.wilaya || '—');
+    const phone = r => (r.phone || r.id || '—');
+
+    const rowBtns = r => {
+      const st = prStatus(r);
+      let b = `<button class="ghost" onclick="window.__view('pre_registrations','${r.id}')">عرض</button>`;
+      if (st !== "approved") b += `<button class="success" onclick="window.__prApprove('${r.id}')">قبول ✓</button>`;
+      if (st !== "rejected") b += `<button class="danger" onclick="window.__prReject('${r.id}')">رفض ✗</button>`;
+      b += `<button class="danger" onclick="window.__prDelete('${r.id}')">حذف</button>`;
+      return b;
+    };
+
+    const tableBody = rows.map(r => `
+      <tr>
+        <td>${pic(r) ? `<img src="${pic(r)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover" onclick="window.__viewImg('${pic(r)}')">` : '—'}</td>
+        <td style="font-weight:600">${escape(r.name || '—')}</td>
+        <td>${escape(phone(r))}</td>
+        <td>${escape(cat(r))}</td>
+        <td>${escape(city(r))}</td>
+        <td>${statusPill(prStatus(r))}</td>
+        <td>${fmtDate(r.createdAt || r.timestamp)}</td>
+        <td class="actions">${rowBtns(r)}</td>
+      </tr>
+    `).join("");
+
+    const cards = rows.map(r => `
+      <div class="data-card">
+        <div class="dc-head">
+          <div style="display:flex;align-items:center;gap:10px">
+            ${pic(r) ? `<img src="${pic(r)}" style="width:44px;height:44px;border-radius:50%;object-fit:cover" onclick="window.__viewImg('${pic(r)}')">` : ''}
+            <strong>${escape(r.name || '—')}</strong>
+          </div>
+          ${statusPill(prStatus(r))}
+        </div>
+        <div class="dc-row"><span class="dc-key">الهاتف</span><span class="dc-val">${escape(phone(r))}</span></div>
+        <div class="dc-row"><span class="dc-key">التخصص</span><span class="dc-val">${escape(cat(r))}</span></div>
+        <div class="dc-row"><span class="dc-key">المدينة</span><span class="dc-val">${escape(city(r))}</span></div>
+        <div class="dc-row"><span class="dc-key">التاريخ</span><span class="dc-val">${fmtDate(r.createdAt || r.timestamp)}</span></div>
+        <div class="dc-actions">${rowBtns(r)}</div>
+      </div>
+    `).join("");
+
+    area.innerHTML = `
+      <div class="table-scroll"><table>
+        <thead><tr><th>الصورة</th><th>الاسم</th><th>الهاتف</th><th>التخصص</th><th>المدينة</th><th>الحالة</th><th>التاريخ</th><th>أوامر</th></tr></thead>
+        <tbody>${tableBody}</tbody>
+      </table></div>
+      <div class="cards-list active">${cards}</div>
+    `;
+  }
+
+  $("refresh").onclick = load;
+  $("search").oninput = () => { searchQ = $("search").value.trim(); apply(); };
+  document.querySelectorAll('[data-f]').forEach(btn => {
+    btn.onclick = () => {
+      viewFilter = btn.dataset.f;
+      document.querySelectorAll('[data-f]').forEach(b => b.classList.toggle('active', b === btn));
+      apply();
+    };
+  });
+
+  window.__view = (c, id) => openViewModal(c, id);
+  window.__prApprove = async (id) => {
+    try {
+      await updateDoc(doc(db, "pre_registrations", id), { approved: true, status: "approved", approvedAt: serverTimestamp() });
+      toast("اتقبل ✓", "success");
+      load();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+  window.__prReject = async (id) => {
+    if (!confirm("متأكد باش ترفض هاد التسجيل؟")) return;
+    try {
+      await updateDoc(doc(db, "pre_registrations", id), { approved: false, status: "rejected", rejectedAt: serverTimestamp() });
+      toast("اترفض", "success");
+      load();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+  window.__prDelete = async (id) => {
+    if (!confirm(`حذف التسجيل ${id}؟`)) return;
+    try {
+      await deleteDoc(doc(db, "pre_registrations", id));
+      toast("اتحذف", "success");
+      load();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+
+  load();
+}
+
+// ============================================================
+// SUPPORT (الدعم)
+// ============================================================
+const SUPPORT_COL = "support_messages";
+
+async function renderSupport() {
+  const page = $("page");
+  page.innerHTML = `
+    <div class="page-header">
+      <h2>🆘 الدعم</h2>
+      <div class="tools">
+        <input type="text" id="search" placeholder="بحث…" style="width:220px">
+        <button class="ghost" id="refresh">🔄</button>
+      </div>
+    </div>
+    <div class="tools" style="margin-bottom:16px;gap:8px;display:flex;flex-wrap:wrap">
+      <button class="ghost active" data-f="new">🆕 جداد</button>
+      <button class="ghost" data-f="replied">✓ مردود عليهم</button>
+      <button class="ghost" data-f="all">الكل</button>
+    </div>
+    <div id="table-area" class="loading"><div class="spinner"></div></div>
+  `;
+
+  let allRows = [];
+  let viewFilter = "new";
+  let searchQ = "";
+
+  const senderName = r => (r.userName || r.name || r.senderName || r.email || r.userId || r.uid || "مستخدم");
+  const senderUid = r => (r.userId || r.uid || r.senderId || null);
+  const msgText = r => (r.message || r.text || r.body || "");
+  const spStatus = r => ((r.status === "replied" || r.adminReply) ? "replied" : "new");
+
+  async function load() {
+    const area = $("table-area");
+    area.className = "loading";
+    area.innerHTML = '<div class="spinner"></div>';
+    try {
+      const snap = await getDocs(query(collection(db, SUPPORT_COL), limit(500)));
+      allRows = [];
+      snap.forEach(d => allRows.push({ id: d.id, ...d.data() }));
+      apply();
+    } catch (e) {
+      area.className = "";
+      area.innerHTML = `<div class="empty-state">خطأ: ${escape(e.message)}<br><span style="font-size:11px">⚠ تأكد بلي collection سميتو <b>${SUPPORT_COL}</b></span></div>`;
+    }
+  }
+
+  function apply() {
+    let rows = allRows.slice();
+    if (viewFilter !== "all") rows = rows.filter(r => spStatus(r) === viewFilter);
+    if (searchQ) {
+      const q = searchQ.toLowerCase();
+      rows = rows.filter(r => JSON.stringify(r).toLowerCase().includes(q));
+    }
+    rows.sort((a, b) => rowDateMs(b) - rowDateMs(a));
+    render(rows);
+  }
+
+  function render(rows) {
+    const area = $("table-area");
+    if (rows.length === 0) {
+      area.className = "";
+      area.innerHTML = '<div class="empty-state">ما كاينش رسائل دعم</div>';
+      return;
+    }
+    area.className = "";
+    area.innerHTML = `<div class="cards-list active" style="display:flex">${rows.map(r => {
+      const uid = senderUid(r);
+      const st = spStatus(r);
+      return `
+      <div class="data-card">
+        <div class="dc-head">
+          <strong>${escape(senderName(r))}</strong>
+          ${st === "replied" ? '<span class="pill green">✓ مردود</span>' : '<span class="pill amber">🆕 جديد</span>'}
+        </div>
+        <div class="dc-row"><span class="dc-key">الرسالة</span><span class="dc-val" style="white-space:pre-wrap">${escape(msgText(r))}</span></div>
+        ${uid ? `<div class="dc-row"><span class="dc-key">UID</span><span class="dc-val" style="font-family:ui-monospace,monospace;font-size:11px">${escape(uid)}</span></div>` : ''}
+        <div class="dc-row"><span class="dc-key">التاريخ</span><span class="dc-val">${fmtDate(r.createdAt || r.timestamp)}</span></div>
+        ${r.adminReply ? `<div class="dc-row"><span class="dc-key">ردّك</span><span class="dc-val" style="color:var(--success);white-space:pre-wrap">${escape(r.adminReply)}</span></div>` : ''}
+        <div class="dc-actions">
+          <button class="primary" onclick="window.__spReply('${r.id}')">💬 رد</button>
+          ${uid ? `<button class="danger" onclick="window.__spBlock('${uid}')">🚫 بلوك</button>` : ''}
+          <button class="danger" onclick="window.__spDelete('${r.id}')">حذف</button>
+        </div>
+      </div>`;
+    }).join("")}</div>`;
+  }
+
+  $("refresh").onclick = load;
+  $("search").oninput = () => { searchQ = $("search").value.trim(); apply(); };
+  document.querySelectorAll('[data-f]').forEach(btn => {
+    btn.onclick = () => {
+      viewFilter = btn.dataset.f;
+      document.querySelectorAll('[data-f]').forEach(b => b.classList.toggle('active', b === btn));
+      apply();
+    };
+  });
+
+  window.__spReply = (id) => {
+    const r = allRows.find(x => x.id === id) || {};
+    const m = $("modal");
+    const ov = $("modal-overlay");
+    m.innerHTML = `
+      <h3>رد على ${escape(senderName(r))}</h3>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;margin-bottom:14px;white-space:pre-wrap;font-size:13px">${escape(msgText(r) || "—")}</div>
+      <div class="edit-field">
+        <label>ردّك</label>
+        <textarea id="sp-reply-text" placeholder="اكتب الرد هنا…">${escape(r.adminReply || "")}</textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="primary" id="sp-reply-save">إرسال الرد</button>
+        <button class="ghost" onclick="document.getElementById('modal-overlay').hidden=true">إلغاء</button>
+      </div>
+    `;
+    ov.hidden = false;
+    $("sp-reply-save").onclick = async () => {
+      const txt = $("sp-reply-text").value.trim();
+      if (!txt) { toast("اكتب الرد لول", "error"); return; }
+      try {
+        await updateDoc(doc(db, SUPPORT_COL, id), { adminReply: txt, status: "replied", repliedAt: serverTimestamp() });
+        toast("اتبعث الرد ✓", "success");
+        ov.hidden = true;
+        load();
+      } catch (e) { toast("خطأ: " + e.message, "error"); }
+    };
+  };
+  window.__spBlock = async (uid) => {
+    if (!confirm("متأكد باش تبلوكي هاد المستخدم؟")) return;
+    try {
+      const snap = await getDoc(doc(db, "users", uid));
+      const cur = snap.exists() ? snap.data().isBlocked === true : false;
+      await updateDoc(doc(db, "users", uid), { isBlocked: !cur });
+      toast(!cur ? "اتبلوكا 🚫" : "اتفكّ البلوك", "success");
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+  window.__spDelete = async (id) => {
+    if (!confirm("حذف هاد الرسالة؟")) return;
+    try {
+      await deleteDoc(doc(db, SUPPORT_COL, id));
+      toast("اتحذف", "success");
+      load();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+
+  load();
+}
+
+// ============================================================
+// APPEALS (الطعون) — وضّح شكون لي ألغى العملية: حرفي ام زبون
+// ============================================================
+window.renderAppeals = async function () {
+  const page = $("page");
+  page.innerHTML = `
+    <div class="page-header">
+      <h2>⚖️ الطعون</h2>
+      <div class="tools">
+        <input type="text" id="search" placeholder="بحث…" style="width:220px">
+        <button class="ghost" id="refresh">🔄</button>
+      </div>
+    </div>
+    <div id="table-area" class="loading"><div class="spinner"></div></div>
+  `;
+
+  let allRows = [];
+  let searchQ = "";
+  const reqCache = {};
+
+  async function getReq(id) {
+    if (!id) return null;
+    if (reqCache[id] !== undefined) return reqCache[id];
+    let found = null;
+    for (const col of ["requests", "post_offers", "community_posts"]) {
+      try {
+        const s = await getDoc(doc(db, col, id));
+        if (s.exists()) { found = s.data(); break; }
+      } catch (e) { /* skip */ }
+    }
+    reqCache[id] = found;
+    return found;
+  }
+
+  function whoCancelled(a, req) {
+    // 1) حقل صريح بالنوع
+    const typeField = (a.cancelledByType || a.canceledByType || a.cancelledByRole || a.cancelledByUserType || a.cancelledByUserRole || "").toString().toLowerCase();
+    if (typeField.includes("work") || typeField.includes("حرف")) return "worker";
+    if (typeField.includes("client") || typeField.includes("زب")) return "client";
+
+    // 2) قارن id تاع لي ألغى مع worker/client
+    const by = a.cancelledBy || a.canceledBy || a.cancelledByUid || a.byUid || null;
+    if (by) {
+      const wid = a.workerId || a.workerUid || (req && (req.workerId || req.workerUid));
+      const cid = a.clientId || a.clientUid || (req && (req.clientId || req.clientUid));
+      if (wid && by === wid) return "worker";
+      if (cid && by === cid) return "client";
+    }
+    return null;
+  }
+
+  function whoPill(who) {
+    if (who === "worker") return '<span class="pill amber">👷 ألغاها الحرفي</span>';
+    if (who === "client") return '<span class="pill blue">🧑 ألغاها الزبون</span>';
+    return '<span class="pill gray">غير معروف</span>';
+  }
+
+  async function load() {
+    const area = $("table-area");
+    area.className = "loading";
+    area.innerHTML = '<div class="spinner"></div>';
+    try {
+      const snap = await getDocs(query(collection(db, "appeals"), limit(500)));
+      allRows = [];
+      snap.forEach(d => allRows.push({ id: d.id, ...d.data() }));
+      await Promise.all(allRows.map(async (a) => {
+        const linkId = a.requestId || a.postId || a.orderId || a.requestUid || null;
+        const req = await getReq(linkId);
+        a.__who = whoCancelled(a, req);
+      }));
+      apply();
+    } catch (e) {
+      area.className = "";
+      area.innerHTML = `<div class="empty-state">خطأ: ${escape(e.message)}</div>`;
+    }
+  }
+
+  function apply() {
+    let rows = allRows.slice();
+    if (searchQ) {
+      const q = searchQ.toLowerCase();
+      rows = rows.filter(r => JSON.stringify(r).toLowerCase().includes(q));
+    }
+    rows.sort((a, b) => rowDateMs(b) - rowDateMs(a));
+    render(rows);
+  }
+
+  function render(rows) {
+    const area = $("table-area");
+    if (rows.length === 0) {
+      area.className = "";
+      area.innerHTML = '<div class="empty-state">ما كاينش طعون</div>';
+      return;
+    }
+    area.className = "table-wrap auto-cards";
+    const reason = r => (r.reason || r.message || r.text || r.note || "—");
+
+    const tableBody = rows.map(r => `
+      <tr>
+        <td class="id-cell" title="${escape(r.id)}">${escape(r.id.slice(0, 12))}…</td>
+        <td>${whoPill(r.__who)}</td>
+        <td>${escape(String(reason(r)).slice(0, 60))}</td>
+        <td><span class="pill ${r.status === 'resolved' || r.status === 'accepted' ? 'green' : r.status === 'pending' ? 'amber' : 'gray'}">${escape(r.status || '—')}</span></td>
+        <td>${fmtDate(r.createdAt || r.timestamp)}</td>
+        <td class="actions">
+          <button class="ghost" onclick="window.__view('appeals','${r.id}')">عرض</button>
+          <button class="danger" onclick="window.__delAppeal('${r.id}')">حذف</button>
+        </td>
+      </tr>
+    `).join("");
+
+    const cards = rows.map(r => `
+      <div class="data-card">
+        <div class="dc-head">
+          <span class="dc-id">${escape(r.id)}</span>
+          ${whoPill(r.__who)}
+        </div>
+        <div class="dc-row"><span class="dc-key">السبب</span><span class="dc-val" style="white-space:pre-wrap">${escape(String(reason(r)))}</span></div>
+        <div class="dc-row"><span class="dc-key">الحالة</span><span class="dc-val"><span class="pill ${r.status === 'resolved' || r.status === 'accepted' ? 'green' : r.status === 'pending' ? 'amber' : 'gray'}">${escape(r.status || '—')}</span></span></div>
+        <div class="dc-row"><span class="dc-key">التاريخ</span><span class="dc-val">${fmtDate(r.createdAt || r.timestamp)}</span></div>
+        <div class="dc-actions">
+          <button class="ghost" onclick="window.__view('appeals','${r.id}')">عرض</button>
+          <button class="danger" onclick="window.__delAppeal('${r.id}')">حذف</button>
+        </div>
+      </div>
+    `).join("");
+
+    area.innerHTML = `
+      <div class="table-scroll"><table>
+        <thead><tr><th>ID</th><th>شكون ألغى</th><th>السبب</th><th>الحالة</th><th>التاريخ</th><th>أوامر</th></tr></thead>
+        <tbody>${tableBody}</tbody>
+      </table></div>
+      <div class="cards-list active">${cards}</div>
+    `;
+  }
+
+  $("refresh").onclick = load;
+  $("search").oninput = () => { searchQ = $("search").value.trim(); apply(); };
+
+  window.__view = (c, id) => openViewModal(c, id);
+  window.__delAppeal = async (id) => {
+    if (!confirm(`حذف الطعن ${id}؟`)) return;
+    try {
+      await deleteDoc(doc(db, "appeals", id));
+      toast("اتحذف", "success");
+      load();
+    } catch (e) { toast("خطأ: " + e.message, "error"); }
+  };
+
+  load();
+};
+
+// Close modal on outside click
+$("modal-overlay").addEventListener("click", (e) => {
+  if (e.target.id === "modal-overlay") e.target.hidden = true;
+});
+
+</script>
+<!-- appeals.js اتعطّل: ولّينا نستعملو renderAppeals داخلي (يبيّن شكون ألغى العملية).
+     إذا كان appeals.js فيه منطق زايد تحب تحتفظ بيه، ابعثهولي ندمجوه. -->
+<!-- <script type="module" src="appeals.js"></script> -->
+</body>
+</html>
