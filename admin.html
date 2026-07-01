@@ -646,7 +646,7 @@ window.__fb = { db, doc, getDoc, getDocs, collection, query, where, limit, order
 const COLLECTIONS = [
   { id: "dashboard", label: "📊 لوحة القيادة", special: true },
   { id: "users", label: "المستخدمين" },
-  { id: "unverified", label: "⏳ غير موثّقين", special: true },
+  { id: "pre_registrations", label: "📝 تسجيل مسبق", special: true },
   { id: "requests", label: "الطلبات" },
   { id: "post_offers", label: "العروض" },
   { id: "phone_reveals", label: "كشف الهاتف" },
@@ -806,7 +806,7 @@ function navigateTo(pageId) {
   if (pageId === "dashboard") renderDashboard();
   else if (pageId === "recharge_codes") renderRechargeCodes();
   else if (pageId === "appeals") { if (window.renderAppeals) window.renderAppeals(); else $("page").innerHTML = '<div class="empty-state">ملف appeals.js غير محمّل</div>'; }
-  else if (pageId === "unverified") renderUnverified();
+  else if (pageId === "pre_registrations") renderPreRegistrations();
   else renderCollection(pageId);
 }
 
